@@ -12,7 +12,10 @@ public record DocumentVersionResponse(
         String notes,
         String verificationStatus,
         String uploadedBy,
-        Instant createdAt
+        Instant createdAt,
+        String ocrStatus,
+        String ocrMessage,
+        String extractedText
 ) {
     public static DocumentVersionResponse from(DocumentVersion v) {
         return new DocumentVersionResponse(
@@ -24,7 +27,10 @@ public record DocumentVersionResponse(
                 v.getNotes(),
                 v.getVerificationStatus(),
                 v.getUploadedBy(),
-                v.getCreatedAt()
+                v.getCreatedAt(),
+                v.getOcrStatus(),
+                v.getOcrMessage(),
+                v.getExtractedText()
         );
     }
 }
