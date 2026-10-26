@@ -53,7 +53,7 @@ public class ComplianceController {
     }
 
     @PostMapping("/{id}/submit")
-    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR')")
     @Operation(summary = "Submit compliance evidence", description = "Upload affidavit or evidence proof for a condition")
     public ResponseEntity<ComplianceResponse> submitEvidence(
             @PathVariable String id,
@@ -65,7 +65,7 @@ public class ComplianceController {
     }
 
     @PostMapping("/{id}/under-verification")
-    @PreAuthorize("hasAnyRole('COMPLIANCE_REVIEWER', 'REGIONAL_OFFICER', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('COMPLIANCE_REVIEWER', 'REGIONAL_OFFICER', 'ADMINISTRATOR')")
     @Operation(summary = "Mark compliance under verification", description = "Initiate documentary review by bureau officer")
     public ResponseEntity<ComplianceResponse> markUnderVerification(
             @PathVariable String id,
@@ -76,7 +76,7 @@ public class ComplianceController {
     }
 
     @PostMapping("/{id}/verify")
-    @PreAuthorize("hasAnyRole('COMPLIANCE_REVIEWER', 'REGIONAL_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('COMPLIANCE_REVIEWER', 'REGIONAL_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR')")
     @Operation(summary = "Verify compliance evidence", description = "Record official regulatory decision on submitted proof")
     public ResponseEntity<ComplianceResponse> verifyEvidence(
             @PathVariable String id,
