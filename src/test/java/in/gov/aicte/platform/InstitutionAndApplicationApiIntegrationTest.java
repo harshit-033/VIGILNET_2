@@ -52,7 +52,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "officer_sharma")
+    @WithMockUser(username = "officer_sharma", roles = "ADMINISTRATOR")
     @DisplayName("Create and retrieve institution successfully, verifying audit event")
     void shouldCreateAndRetrieveInstitution() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -94,7 +94,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Reject blank or invalid institution input with 400 ProblemDetail")
     void shouldRejectBlankOrInvalidInstitutionInput() throws Exception {
         CreateInstitutionRequest blankRequest = new CreateInstitutionRequest("   ", "   ");
@@ -110,7 +110,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Reject duplicate institutional identifier with 409 Conflict")
     void shouldRejectDuplicateInstitutionalIdentifier() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -133,7 +133,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Return 404 when institution or application is not found")
     void shouldReturn404WhenNotFound() throws Exception {
         mockMvc.perform(get("/api/v1/institutions/{id}", 999999L))
@@ -148,7 +148,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "scrutiny_lead")
+    @WithMockUser(username = "scrutiny_lead", roles = "ADMINISTRATOR")
     @DisplayName("Create and retrieve application linked to existing institution, verifying audit trail")
     void shouldCreateAndRetrieveApplicationLinkedToInstitution() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -206,7 +206,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Reject application with nonexistent institution ID with 404 ProblemDetail")
     void shouldRejectApplicationWithNonexistentInstitution() throws Exception {
         CreateApplicationRequest appReq = new CreateApplicationRequest(
@@ -225,7 +225,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Reject duplicate application reference with 409 Conflict")
     void shouldRejectDuplicateApplicationReference() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -256,7 +256,7 @@ class InstitutionAndApplicationApiIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Paginate and filter applications by institutionId, status, and academicYear")
     void shouldPaginateAndFilterApplications() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
