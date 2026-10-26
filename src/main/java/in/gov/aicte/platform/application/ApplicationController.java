@@ -58,7 +58,7 @@ public class ApplicationController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR')")
     @Operation(summary = "Create application", description = "Register a new application linked to a canonical institution")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Application successfully created"),
