@@ -1,0 +1,65 @@
+name: VIGILNET CI
+
+on:
+  push:
+    branches: [main, "fix/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: aicte_platform_db
+          POSTGRES_USER: aicte_app_user
+          POSTGRES_PASSWORD: aicte_123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U aicte_app_user -d aicte_platform_db"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/aicte_platform_db
+      SPRING_DATASOURCE_USERNAME: aicte_app_user
+      SPRING_DATASOURCE_PASSWORD: aicte_123
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Run backend integration tests
+        run: |
+          chmod +x ./mvnw
+          ./mvnw --batch-mode test
+
+  frontend-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Run frontend tests
+        run: npm test
+      - name: Build frontend
+        run: npm run build
+      - name: Run frontend static analysis
+        run: npm run lint
