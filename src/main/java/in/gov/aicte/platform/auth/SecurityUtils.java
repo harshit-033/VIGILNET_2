@@ -187,7 +187,7 @@ public class SecurityUtils {
             case "RETURN_FOR_CORRECTION", "RESOLVE_DEFICIENCY", "UPDATE_CHECKLIST", "COMPLETE_SCRUTINY" -> {
                 if (!hasRole(ROLE_SCRUTINY_OFFICER) && !hasRole(ROLE_REGIONAL_OFFICER)) {
                     throw new AccessDeniedException(String.format(
-                            "Workflow action '%s' requires SCRUTINY_OFFICER or REGIONAL_OFFICER.",
+                            "Unauthorized workflow transition: Action '%s' requires SCRUTINY_OFFICER or REGIONAL_OFFICER role.",
                             normalizedAction
                     ));
                 }
