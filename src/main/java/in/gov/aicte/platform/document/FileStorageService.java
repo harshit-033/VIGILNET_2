@@ -118,17 +118,31 @@ public class FileStorageService {
         );
     }
 
+    public Path getRootLocation() {
+        return this.rootLocation;
+    }
+
     public Resource loadAsResource(String storagePath) {
+        if (storagePath == null || storagePath.isBlank()) {
+            throw new in.gov.aicte.platform.common.exception.ResourceNotFoundException("Storage path is empty.");
+        }
         try {
             Path file = Paths.get(storagePath).normalize();
+            if (!Files.exists(file)) {
+                // If path is relative or from another working dir, resolve against rootLocation
+                Path candidate = this.rootLocation.resolve(file.getFileName()).normalize();
+                if (Files.exists(candidate)) {
+                    file = candidate;
+                }
+            }
             Resource resource = new UrlResource(file.toUri());
-            if (resource.exists() || resource.isReadable()) {
+            if (resource.exists() && resource.isReadable()) {
                 return resource;
             } else {
-                throw new RuntimeException("Could not read file: " + storagePath);
+                throw new in.gov.aicte.platform.common.exception.ResourceNotFoundException("Document file not found or unreadable on disk: " + storagePath);
             }
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Could not read file: " + storagePath, e);
+            throw new in.gov.aicte.platform.common.exception.ResourceNotFoundException("Could not read file: " + storagePath, e);
         }
     }
 }

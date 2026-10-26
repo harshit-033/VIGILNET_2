@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -130,9 +131,16 @@ public class OcrService {
         Path outputText = workDir.resolve("recognized.txt");
         Path processLog = workDir.resolve("tesseract.log");
         try {
-            Process process = new ProcessBuilder(tesseractCommand, image.toString(), outputBase.toString(),
-                    "-l", language, "--psm", "3")
-                    .redirectErrorStream(true)
+            ProcessBuilder pb = new ProcessBuilder(tesseractCommand, image.toString(), outputBase.toString(),
+                    "-l", language, "--psm", "3");
+            String customPrefix = System.getenv("TESSDATA_PREFIX");
+            if (customPrefix == null || customPrefix.isBlank()) {
+                Path userTessdata = Paths.get(System.getProperty("user.home"), ".local", "share", "tessdata");
+                if (Files.exists(userTessdata.resolve(language + ".traineddata"))) {
+                    pb.environment().put("TESSDATA_PREFIX", userTessdata.toString());
+                }
+            }
+            Process process = pb.redirectErrorStream(true)
                     .redirectOutput(processLog.toFile())
                     .start();
             if (!process.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {

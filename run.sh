@@ -85,6 +85,10 @@ if [ -d "$HOME/.local/lib" ]; then
   export LD_LIBRARY_PATH="$HOME/.local/lib:${LD_LIBRARY_PATH:-}"
 fi
 
+if [ -d "$HOME/.local/share/tessdata" ]; then
+  export TESSDATA_PREFIX="${TESSDATA_PREFIX:-$HOME/.local/share/tessdata}"
+fi
+
 export PGDATA="${PGDATA:-$HOME/.local/share/aicte_postgres_data}"
 
 echo -e "${C_GREEN}✓ Using Java 21 from: ${JAVA_HOME}${C_RESET}"
