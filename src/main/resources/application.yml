@@ -1,0 +1,59 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: aicte-compliance-platform
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aicte_platform_db}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:aicte_app_user}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD:aicte_123}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 3000
+      maximum-pool-size: 10
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+app:
+  security:
+    dev-tokens-enabled: ${DEV_TOKENS_ENABLED:true}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+# ==============================================================================
+# Production Profile Configuration
+# Fails fast if mandatory production credentials are absent.
+# Disables dev-token authentication bridges.
+# ==============================================================================
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    # In production, password MUST be explicitly provided via environment variable
+    password: ${SPRING_DATASOURCE_PASSWORD:${DB_PASSWORD}}
+
+app:
+  security:
+    dev-tokens-enabled: false
+

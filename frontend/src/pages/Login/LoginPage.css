@@ -1,0 +1,154 @@
+/* SIH 26262 - Login Screen Government Portal Styling */
+
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg);
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 900px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(16, 43, 70, 0.08);
+}
+
+.login-branding {
+  background: var(--color-navy);
+  color: #FFFFFF;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.login-brand-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.login-brand-logo {
+  width: 44px;
+  height: 44px;
+  background: #FFFFFF;
+  color: var(--color-navy);
+  border-radius: var(--radius-sm);
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.login-branding h1 {
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+}
+
+.login-branding p {
+  color: #BED2E6;
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  margin-bottom: 24px;
+}
+
+.login-features {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 20px;
+}
+
+.login-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-xs);
+  color: #E1ECF7;
+}
+
+.login-form-side {
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #FFFFFF;
+}
+
+.login-form-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-navy);
+  margin-bottom: 4px;
+}
+
+.login-form-subtitle {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-muted);
+  margin-bottom: 20px;
+}
+
+.quick-role-chips {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.quick-role-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.role-chip {
+  padding: 4px 8px;
+  background: #F0F4F8;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--color-blue);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.role-chip:hover, .role-chip.active {
+  background: var(--color-blue);
+  color: #FFFFFF;
+  border-color: var(--color-blue);
+}
+
+@media (max-width: 768px) {
+  .login-card {
+    grid-template-columns: 1fr;
+  }
+  .login-branding {
+    padding: 24px;
+  }
+  .login-form-side {
+    padding: 24px;
+  }
+}
