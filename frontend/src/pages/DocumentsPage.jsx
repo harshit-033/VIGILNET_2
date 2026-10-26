@@ -64,6 +64,7 @@ export const DocumentsPage = () => {
   const [uploadFileBlobUrl, setUploadFileBlobUrl] = useState(null);
   const [uploadFileType, setUploadFileType] = useState('');
   const [uploadFile, setUploadFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // 2. Submit Renewal Modal
   const [isRenewalModalOpen, setIsRenewalModalOpen] = useState(false);
@@ -167,44 +168,27 @@ export const DocumentsPage = () => {
     setIsUploadModalOpen(true);
   };
 
-  // Confirm Upload
+  // Confirm Upload: never fabricate a placeholder document; store the selected file.
   const handleConfirmUpload = async (e) => {
     e.preventDefault();
-
-    if (!uploadCategory) {
-      alert('Please select a valid statutory document type.');
-      return;
-    }
-    if (!uploadIssueDate || !uploadExpiryDate) {
-      alert('Both issue date and expiry date are mandatory.');
-      return;
-    }
-    if (new Date(uploadIssueDate) > new Date(uploadExpiryDate)) {
-      alert('Validation Error: Issue Date cannot be later than Expiry Date.');
-      return;
-    }
-
-    const res = await uploadDocument({
-      institutionId: isInstitutionRep ? (user?.institutionId || 'INST-1025') : 'INST-1025',
-      institutionName: isInstitutionRep ? (user?.institutionName || 'ABC Institute of Technology') : 'ABC Institute of Technology',
-      category: uploadCategory,
-      documentType: uploadCategory,
-      issueDate: uploadIssueDate,
-      expiryDate: uploadExpiryDate,
-      fileName: uploadFileName || `${uploadCategory.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
-      fileBlobUrl: uploadFileBlobUrl,
-      file: uploadFile,
-      notes: uploadNotes,
-      actorName: user?.name,
-      actorRole: role,
-    });
-
-    if (res.success) {
-      setIsUploadModalOpen(false);
-      alert(`Statutory document ${res.document.id} successfully registered and queued for verification.`);
-    } else {
-      alert(res.error);
-    }
+    if (!uploadFile || uploadFile.size === 0) { alert('Select a real PDF, PNG, or JPEG file before uploading.'); return; }
+    if (uploadFile.size > 25 * 1024 * 1024) { alert('The selected document exceeds the 25 MB upload limit.'); return; }
+    if (!uploadCategory) { alert('Please select a valid statutory document type.'); return; }
+    if (!uploadIssueDate || !uploadExpiryDate) { alert('Both issue date and expiry date are mandatory.'); return; }
+    if (new Date(uploadIssueDate) > new Date(uploadExpiryDate)) { alert('Issue Date cannot be later than Expiry Date.'); return; }
+    setIsUploading(true);
+    try {
+      const res = await uploadDocument({
+        institutionId: isInstitutionRep ? (user?.institutionId || '') : '',
+        institutionName: isInstitutionRep ? (user?.institutionName || '') : '',
+        category: uploadCategory, documentType: uploadCategory,
+        issueDate: uploadIssueDate, expiryDate: uploadExpiryDate,
+        fileName: uploadFile.name, fileBlobUrl: uploadFileBlobUrl, file: uploadFile,
+        notes: uploadNotes, actorName: user?.name, actorRole: role,
+      });
+      if (res.success) { setIsUploadModalOpen(false); alert(`Document ${res.document.id} uploaded. OCR status: ${res.document.ocrStatus || 'PENDING'}.`); }
+      else { alert(res.error); }
+    } finally { setIsUploading(false); }
   };
 
   // Open Renewal Modal
@@ -309,8 +293,8 @@ export const DocumentsPage = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={handleOpenUploadModal} className="btn btn-primary">
-            <Upload size={14} /> Upload Statutory Document
+          <button onClick={handleOpenUploadModal} className="btn btn-primary" type="button">
+            <Upload size={14} /> Upload Document &amp; Extract Text
           </button>
         </div>
       </div>
@@ -623,7 +607,7 @@ export const DocumentsPage = () => {
             <input
               type="file"
               className="form-input"
-              accept=".pdf,image/png,image/jpeg,image/webp"
+              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
               onChange={(e) => handleFileUploadChange(e, false)}
               style={{ padding: '6px' }}
             />
@@ -633,7 +617,7 @@ export const DocumentsPage = () => {
               </div>
             ) : (
               <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-                File will be available for instant preview in the browser viewer during this session.
+                PDF/PNG/JPEG only, up to 25 MB. SAGE stores the file and extracts PDF text or runs Tesseract OCR on scans.
               </div>
             )}
           </div>
@@ -653,8 +637,8 @@ export const DocumentsPage = () => {
             <button type="button" onClick={() => setIsUploadModalOpen(false)} className="btn btn-outline">
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              <Upload size={14} /> Register &amp; Submit Document
+            <button type="submit" className="btn btn-primary" disabled={isUploading || !uploadFile}>
+              <Upload size={14} /> {isUploading ? 'Uploading &amp; extracting text…' : 'Upload Document &amp; Run OCR'}
             </button>
           </div>
         </form>
@@ -708,7 +692,8 @@ export const DocumentsPage = () => {
               <input
                 type="file"
                 className="form-input"
-                accept=".pdf,image/png,image/jpeg,image/webp"
+                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                required
                 onChange={(e) => handleFileUploadChange(e, true)}
                 style={{ padding: '6px' }}
               />
@@ -838,6 +823,22 @@ export const DocumentsPage = () => {
                       {selectedDoc.currentVersion || 'v1.0'}
                     </div>
                   </div>
+                </div>
+
+                {/* OCR result is persisted by the backend with the document and its version. */}
+                <div style={{ border: '1px solid #CBD5E1', borderRadius: 'var(--radius-sm)', padding: '12px', background: '#F8FAFC' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--color-navy)' }}>
+                      <FileText size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} /> OCR / Extracted Document Text
+                    </div>
+                    <span className="badge badge-gray">{selectedDoc.ocrStatus || 'PENDING'}</span>
+                  </div>
+                  {selectedDoc.ocrMessage && <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px' }}>{selectedDoc.ocrMessage}</div>}
+                  {selectedDoc.extractedText ? (
+                    <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: '220px', overflowY: 'auto', margin: '8px 0 0', padding: '10px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '4px', fontSize: '11px', lineHeight: 1.5, color: '#243447' }}>{selectedDoc.extractedText}</pre>
+                  ) : (
+                    <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--color-text-muted)' }}>No extracted text is available yet. Check the OCR status and backend setup.</div>
+                  )}
                 </div>
 
                 {/* Live Preview Section */}
