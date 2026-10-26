@@ -282,12 +282,39 @@ public class WorkflowService {
                     ));
                 }
 
-                // Determine next stage: Configurable based on whether EVC inspection is required
-                toStage = (request.nextStage() != null && !request.nextStage().isBlank())
+                // Only allow destinations represented by the current workflow model.
+                // Arbitrary client-provided stage names must never enter persisted state.
+                String requestedStage = (request.nextStage() != null && !request.nextStage().isBlank())
                         ? request.nextStage().trim()
                         : "EVC scheduling";
-                toStatus = "Due soon";
+                if ("EVC scheduling".equalsIgnoreCase(requestedStage)) {
+                    toStage = "EVC scheduling";
+                } else if ("Committee review".equalsIgnoreCase(requestedStage)) {
+                    toStage = "Committee review";
+                } else {
+                    throw new IllegalArgumentException(
+                            "Unsupported next scrutiny stage: " + requestedStage
+                                    + ". Allowed destinations are 'EVC scheduling' and 'Committee review'."
+                    );
+                }
 
+                List<ApplicationChecklist> checklist = checklistRepository.findByApplicationIdOrderByItemCodeAsc(application.getId());
+                if (checklist.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "Cannot complete scrutiny: no statutory checklist items are configured for this application."
+                    );
+                }
+                long unverifiedChecklistCount = checklist.stream()
+                        .filter(item -> !Boolean.TRUE.equals(item.getVerified()))
+                        .count();
+                if (unverifiedChecklistCount > 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "Cannot complete scrutiny: %d statutory checklist item(s) remain unverified. Each item must be explicitly verified by an authorized officer.",
+                            unverifiedChecklistCount
+                    ));
+                }
+
+                toStatus = "Due soon";
                 application.setCurrentStage(toStage);
                 application.setStatus(toStatus);
                 if ("EVC scheduling".equalsIgnoreCase(toStage)) {
@@ -300,15 +327,6 @@ public class WorkflowService {
 
                 if (request.observations() != null && !request.observations().isBlank()) {
                     application.setObservations(request.observations().trim());
-                }
-
-                // Automatically mark all statutory checklist items verified upon full clearance
-                List<ApplicationChecklist> checklist = checklistRepository.findByApplicationIdOrderByItemCodeAsc(application.getId());
-                for (ApplicationChecklist chk : checklist) {
-                    chk.setVerified(true);
-                    chk.setVerifiedBy(actorDisplay);
-                    chk.setVerifiedAt(Instant.now());
-                    checklistRepository.save(chk);
                 }
             }
 
