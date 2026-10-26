@@ -26,11 +26,11 @@ This testing guide provides step-by-step procedures for manually testing and ver
 | **End-to-End Scrutiny Journey** | Full Journey Flow | Full Audit & Transition Persistence | **IN SCOPE** (Section 11, TC-08) |
 | **Create Application Workflow** | `POST /api/v1/applications` | `applications`, `audit_events` | **IN SCOPE** (Section 11b, TC-09) |
 | **Institution Management CRUD** | `POST /api/v1/institutions` (Backend API Only) | None in UI (API exists, no UI screen connected) | **EXCLUDED** (Section 12.2) |
-| **EVC Scheduling Module** | None (Uses `localStorage`) | None (`aicte_evc_store` in browser) | **OUT OF SCOPE** (Section 13) |
-| **Compliance Obligations Module** | None (Uses `localStorage`) | None (`aicte_compliance_store` in browser) | **OUT OF SCOPE** (Section 13) |
-| **Document Registry & Versions** | None (Uses `localStorage`) | None (`aicte_documents_store` in browser) | **OUT OF SCOPE** (Section 13) |
-| **System Alerts & Notifications** | None (Uses `localStorage`) | None (`aicte_alerts_store` in browser) | **OUT OF SCOPE** (Section 13) |
-| **Reports & BI Analytics** | None (Calculated in-memory) | None (Local calculation engine) | **OUT OF SCOPE** (Section 13) |
+| **EVC Scheduling Module** | `/api/v1/evc` | PostgreSQL `evc_visits` | **IN SCOPE** — verify schedule, completion and report persistence |
+| **Compliance Obligations Module** | `/api/v1/compliance` | PostgreSQL `compliance_obligations` | **IN SCOPE** — verify status transitions; evidence is currently reference/metadata-based |
+| **Document Registry & Versions** | `/api/v1/documents` | PostgreSQL registry + configured local disk | **IN SCOPE** — verify upload, download and version history |
+| **System Alerts & Notifications** | `/api/v1/alerts` | PostgreSQL `platform_alerts` | **PARTIAL** — acknowledgement/escalation persist; retry remains local UI simulation |
+| **Reports & BI Analytics** | Frontend calculations | In-memory calculations over loaded records | **PARTIAL** — compare KPIs with authorized source records; no dedicated reporting API established |
 
 ---
 
@@ -744,26 +744,16 @@ As required by the assessment mandate, we investigated whether Application Creat
 
 ---
 
-## 13. Out of Scope — Frontend-Only Prototype Features
+## 13. Known Limitations and Partially Connected Features
 
-The following features remain safely isolated on client-side `localStorage` or in-memory mock datasets. **Do not attempt to verify them against PostgreSQL:**
+The current repository connects the EVC, compliance, document and alert screens to Spring Boot APIs. Verify the UI mutation against the API response and PostgreSQL before marking a manual test as passed.
 
-1. **EVC Scheduling & Visit Allocation (`/evc`):**
-   - Managed via `aicte_evc_store` in browser `localStorage`.
-   - Inspection dates and expert panel assignments do not hit the backend API.
-2. **Post-Approval Compliance Obligations (`/compliance`):**
-   - Managed via `aicte_compliance_store`.
-   - Undertaking evidence uploads and review statuses are stored in browser memory.
-3. **Statutory Document Registry & Expiry Tracking (`/documents`):**
-   - Managed via `aicte_documents_store`.
-   - Document upload simulations and renewal status changes remain client-side.
-4. **Alerts, Notifications & Escalations (`/alerts`):**
-   - Managed via `aicte_alerts_store`.
-   - Escalation countdowns and simulated delivery failures operate locally.
-5. **BI Analytics & Executive Dashboards (`/reports`):**
-   - Powered by `dataService.getRoleKPIs()` calculating in-memory counts from localStorage keys.
-6. **OCR & Document Integrity Checks:**
-   - Visual mock indicators representing simulated document checks.
+1. **EVC Scheduling & Visit Allocation (`/evc`):** API-backed scheduling, completion and report submission are implemented. Confirm visit transitions and the linked application stage in the database.
+2. **Post-Approval Compliance Obligations (`/compliance`):** Obligation status transitions persist, but evidence submission currently accepts a filename/reference and notes rather than binary file upload through this endpoint. It is not yet a complete document-to-obligation evidence binding.
+3. **Statutory Document Registry (`/documents`):** The backend stores file bytes on local disk and metadata/version hashes in PostgreSQL. Retention depends on the configured storage directory and its backup/volume strategy.
+4. **Alerts, Notifications & Escalations (`/alerts`):** Acknowledgement and manual escalation persist. The frontend notification retry control currently changes local UI state; it does not establish that a delivery retry occurred. Scheduled delivery has not been verified by this guide.
+5. **BI Analytics & Executive Dashboards (`/reports`):** The frontend calculates KPIs from loaded application/EVC/compliance/document/alert datasets. Compare each metric against source records and role scope.
+6. **OCR & Regulatory Rule Validation:** The current incremental-validation service contains demonstration rule logic and a fixed advisory score. Do not treat its output as confirmed APH compliance validation or document OCR results.
 
 ---
 
