@@ -36,7 +36,7 @@ public class EvcController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'AUDITOR', 'INSTITUTION_REPRESENTATIVE', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'AUDITOR', 'INSTITUTION_REPRESENTATIVE')")
     @Operation(summary = "List EVC visits", description = "Retrieve list of all EVC visits with optional status, region, or keyword filters")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Visits successfully retrieved"),
@@ -51,7 +51,7 @@ public class EvcController {
     }
 
     @GetMapping("/metrics")
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'AUDITOR', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'AUDITOR')")
     @Operation(summary = "EVC dashboard metrics", description = "Calculate real-time KPIs for Total EVC Cases, Pending Scheduling, Upcoming, Completed, Reports Pending, and Overdue")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Metrics successfully calculated"),
@@ -62,7 +62,7 @@ public class EvcController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'AUDITOR', 'INSTITUTION_REPRESENTATIVE', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'AUDITOR', 'INSTITUTION_REPRESENTATIVE')")
     @Operation(summary = "Get EVC visit by ID or Reference", description = "Retrieve single EVC visit details")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Visit found and returned"),
@@ -74,7 +74,7 @@ public class EvcController {
     }
 
     @PostMapping("/{id}/schedule")
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'ADMINISTRATOR')")
     @Operation(summary = "Schedule EVC visit", description = "Assign inspection date, coordinator, inspection mode, and committee panel members")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Visit successfully scheduled"),
@@ -92,7 +92,7 @@ public class EvcController {
     }
 
     @PostMapping("/{id}/complete")
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'ADMINISTRATOR')")
     @Operation(summary = "Mark EVC visit completed", description = "Record physical/virtual inspection conclusion and start report drafting clock")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Visit marked as completed"),
@@ -111,7 +111,7 @@ public class EvcController {
     }
 
     @PostMapping("/{id}/report")
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'EVC_EXPERT', 'ADMINISTRATOR')")
     @Operation(summary = "Submit EVC inspection report", description = "Submit expert committee recommendation and advance application to Committee review")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Report submitted and application advanced"),
@@ -129,7 +129,7 @@ public class EvcController {
     }
 
     @PostMapping("/{id}/reschedule")
-    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('EVC_COORDINATOR', 'ADMINISTRATOR')")
     @Operation(summary = "Revert or reschedule EVC visit", description = "Reverts completed visit back to scheduled or adjusts visit date")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Visit successfully rescheduled or reverted"),
