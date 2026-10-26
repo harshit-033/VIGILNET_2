@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,9 @@ class EvcOperationsIntegrationTest {
 
     @Autowired
     private EvcVisitRepository evcVisitRepository;
+
+    @Autowired
+    private in.gov.aicte.platform.application.checklist.ApplicationChecklistRepository checklistRepository;
 
     @Autowired
     private DevTokenService devTokenService;
@@ -229,10 +233,19 @@ class EvcOperationsIntegrationTest {
     }
 
     @Test
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Workflow Integration: Clearing Scrutiny automatically creates an EVC work item")
     void testScrutinyClearanceCreatesEvcWorkItem() {
         Institution inst = createSampleInstitution("AUTO-EVC");
         Application app = createSampleApplication(inst, "Scrutiny", "In progress");
+
+        // The call below exercises the real workflow guard, so seed a fully reviewed checklist.
+        checklistRepository.saveAll(List.of(
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(app, "CHK-LAND-01", "Land title verified", "APH Table 1.1 Norms", true, "Test Officer"),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(app, "CHK-FACULTY-02", "Faculty cadre ratio verified", "APH Table 2.1 Norms", true, "Test Officer"),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(app, "CHK-FIRE-03", "Fire safety NOC verified", "APH Norms Clause 3.4", true, "Test Officer"),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(app, "CHK-LAB-04", "Laboratory facilities verified", "APH Norms Clause 4.2", true, "Test Officer")
+        ));
 
         WorkflowActionRequest clearReq = new WorkflowActionRequest(
                 "COMPLETE_SCRUTINY",

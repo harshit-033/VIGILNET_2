@@ -50,7 +50,7 @@ public class DocumentController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'REGIONAL_OFFICER', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'REGIONAL_OFFICER', 'ADMINISTRATOR')")
     @Operation(summary = "Upload statutory document", description = "Upload file, compute SHA-256 cryptographic digest, and register document")
     public ResponseEntity<DocumentResponse> uploadDocument(
             @RequestParam("file") MultipartFile file,
@@ -70,7 +70,7 @@ public class DocumentController {
     }
 
     @PostMapping(value = "/{id}/renew", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR')")
     @Operation(summary = "Submit document renewal", description = "Upload new version of expiring statutory certificate")
     public ResponseEntity<DocumentResponse> submitRenewal(
             @PathVariable String id,
@@ -85,7 +85,7 @@ public class DocumentController {
     }
 
     @PostMapping("/{id}/verify")
-    @PreAuthorize("hasAnyRole('SCRUTINY_OFFICER', 'COMPLIANCE_REVIEWER', 'REGIONAL_OFFICER', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('SCRUTINY_OFFICER', 'COMPLIANCE_REVIEWER', 'REGIONAL_OFFICER', 'ADMINISTRATOR')")
     @Operation(summary = "Verify document", description = "Officer verifies statutory authenticity of uploaded certificate")
     public ResponseEntity<DocumentResponse> verifyDocument(
             @PathVariable String id,

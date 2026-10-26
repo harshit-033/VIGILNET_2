@@ -83,26 +83,44 @@ public class SecurityUtils {
      * belonging to their assigned institution.
      */
     public void assertInstitutionAccess(Institution institution) {
-        if (institution == null || !isAuthenticatedUser() || isAdministrator() || isSeniorManagement() || hasRole("ROLE_USER")) {
+        if (!isAuthenticatedUser()) {
+            throw new AccessDeniedException("Authentication is required for institution-scoped access.");
+        }
+        if (isAdministrator() || isSeniorManagement()) {
+            return;
+        }
+        if (hasRole("ROLE_USER")) {
+            throw new AccessDeniedException("The generic USER role is not authorized for institution-scoped access.");
+        }
+        if (institution == null) {
+            if (hasRole(ROLE_INSTITUTION_REPRESENTATIVE)) {
+                throw new AccessDeniedException("Institution Representatives must access a record linked to an assigned institution.");
+            }
             return;
         }
 
         if (hasRole(ROLE_INSTITUTION_REPRESENTATIVE)) {
-            Optional<DevUserDto> userOpt = getCurrentUser();
-            if (userOpt.isPresent()) {
-                DevUserDto user = userOpt.get();
-                String assignedInstId = user.institutionId();
-                if (assignedInstId != null && !assignedInstId.isBlank()) {
-                    boolean match = assignedInstId.equalsIgnoreCase(institution.getInstitutionalIdentifier())
-                            || assignedInstId.equalsIgnoreCase(institution.getId().toString());
-                    if (!match) {
-                        throw new AccessDeniedException(String.format(
-                                "Cross-institution access violation: User '%s' is restricted to institution '%s', but target is '%s'.",
-                                user.name(), assignedInstId, institution.getInstitutionalIdentifier()
-                        ));
-                    }
-                }
+            DevUserDto user = getCurrentUser().orElseThrow(
+                    () -> new AccessDeniedException("Institution Representative profile is unavailable.")
+            );
+            String assignedInstId = user.institutionId();
+            if (assignedInstId == null || assignedInstId.isBlank()) {
+                throw new AccessDeniedException("Institution Representative has no assigned institution.");
             }
+
+            boolean match = assignedInstId.equalsIgnoreCase(institution.getInstitutionalIdentifier())
+                    || assignedInstId.equalsIgnoreCase(institution.getId().toString());
+            if (!match) {
+                throw new AccessDeniedException(String.format(
+                        "Cross-institution access violation: User '%s' is restricted to institution '%s', but target is '%s'.",
+                        user.name(), assignedInstId, institution.getInstitutionalIdentifier()
+                ));
+            }
+        }
+
+        // Enforce regional scope here as well so services cannot accidentally omit it.
+        if (hasRole(ROLE_REGIONAL_OFFICER)) {
+            assertRegionAccess(institution.getRegion());
         }
     }
 
@@ -111,26 +129,36 @@ public class SecurityUtils {
      * belonging to their assigned territorial region.
      */
     public void assertRegionAccess(String targetRegion) {
-        if (targetRegion == null || targetRegion.isBlank() || !isAuthenticatedUser() || isAdministrator() || isSeniorManagement() || hasRole("ROLE_USER")) {
+        if (!isAuthenticatedUser()) {
+            throw new AccessDeniedException("Authentication is required for region-scoped access.");
+        }
+        if (isAdministrator() || isSeniorManagement()) {
             return;
+        }
+        if (hasRole("ROLE_USER")) {
+            throw new AccessDeniedException("The generic USER role is not authorized for region-scoped access.");
         }
 
         if (hasRole(ROLE_REGIONAL_OFFICER)) {
-            Optional<DevUserDto> userOpt = getCurrentUser();
-            if (userOpt.isPresent()) {
-                DevUserDto user = userOpt.get();
-                String assignedRegion = user.region();
-                if (assignedRegion != null && !assignedRegion.isBlank()
-                        && !"All India".equalsIgnoreCase(assignedRegion)
-                        && !"Multi-Region".equalsIgnoreCase(assignedRegion)
-                        && !"Platform-wide".equalsIgnoreCase(assignedRegion)) {
-                    if (!assignedRegion.equalsIgnoreCase(targetRegion.trim())) {
-                        throw new AccessDeniedException(String.format(
-                                "Cross-region access violation: Officer '%s' is restricted to '%s', but target belongs to '%s'.",
-                                user.name(), assignedRegion, targetRegion
-                        ));
-                    }
-                }
+            DevUserDto user = getCurrentUser().orElseThrow(
+                    () -> new AccessDeniedException("Regional Officer profile is unavailable.")
+            );
+            String assignedRegion = user.region();
+            if (assignedRegion == null || assignedRegion.isBlank()) {
+                throw new AccessDeniedException("Regional Officer has no assigned region.");
+            }
+            if (targetRegion == null || targetRegion.isBlank()) {
+                throw new AccessDeniedException("The target record has no region assigned.");
+            }
+
+            if (!"All India".equalsIgnoreCase(assignedRegion)
+                    && !"Multi-Region".equalsIgnoreCase(assignedRegion)
+                    && !"Platform-wide".equalsIgnoreCase(assignedRegion)
+                    && !assignedRegion.equalsIgnoreCase(targetRegion.trim())) {
+                throw new AccessDeniedException(String.format(
+                        "Cross-region access violation: Officer '%s' is restricted to '%s', but target belongs to '%s'.",
+                        user.name(), assignedRegion, targetRegion
+                ));
             }
         }
     }
@@ -139,38 +167,39 @@ public class SecurityUtils {
      * Enforce workflow action-level role authorization.
      */
     public void assertWorkflowActionAllowed(String action) {
-        if (action == null || !isAuthenticatedUser() || isAdministrator() || hasRole("ROLE_USER")) {
+        if (!isAuthenticatedUser()) {
+            throw new AccessDeniedException("Authentication is required for workflow actions.");
+        }
+        if (isAdministrator()) {
             return;
+        }
+        if (action == null || action.isBlank()) {
+            throw new AccessDeniedException("A workflow action is required.");
         }
 
         String normalizedAction = action.trim().toUpperCase();
         switch (normalizedAction) {
+            case "SUBMIT_APPLICATION", "SUBMIT_CORRECTIONS" -> {
+                if (!hasRole(ROLE_INSTITUTION_REPRESENTATIVE)) {
+                    throw new AccessDeniedException("This action requires the INSTITUTION_REPRESENTATIVE role.");
+                }
+            }
             case "RETURN_FOR_CORRECTION", "RESOLVE_DEFICIENCY", "UPDATE_CHECKLIST", "COMPLETE_SCRUTINY" -> {
-                if (!hasRole(ROLE_SCRUTINY_OFFICER) && !hasRole(ROLE_REGIONAL_OFFICER) && !hasRole(ROLE_ADMINISTRATOR)) {
+                if (!hasRole(ROLE_SCRUTINY_OFFICER) && !hasRole(ROLE_REGIONAL_OFFICER)) {
                     throw new AccessDeniedException(String.format(
-                            "Unauthorized workflow transition: Action '%s' requires SCRUTINY_OFFICER, REGIONAL_OFFICER, or ADMINISTRATOR role.",
+                            "Unauthorized workflow transition: Action '%s' requires SCRUTINY_OFFICER or REGIONAL_OFFICER role.",
                             normalizedAction
                     ));
                 }
             }
-
-            case "SUBMIT_CORRECTIONS" -> {
-                if (!hasRole(ROLE_INSTITUTION_REPRESENTATIVE) && !hasRole(ROLE_ADMINISTRATOR)) {
-                    throw new AccessDeniedException(String.format(
-                            "Unauthorized workflow transition: Action '%s' requires INSTITUTION_REPRESENTATIVE or ADMINISTRATOR role.",
-                            normalizedAction
-                    ));
+            case "UPDATE_OBSERVATIONS" -> {
+                if (!hasRole(ROLE_INSTITUTION_REPRESENTATIVE)
+                        && !hasRole(ROLE_SCRUTINY_OFFICER)
+                        && !hasRole(ROLE_REGIONAL_OFFICER)) {
+                    throw new AccessDeniedException("This action is not permitted for the current role.");
                 }
             }
-
-            case "RECOMMEND_APPROVAL", "REJECT", "GRANT_APPROVAL" -> {
-                if (!hasRole(ROLE_SENIOR_MANAGEMENT) && !hasRole(ROLE_COMMITTEE_MEMBER) && !hasRole(ROLE_ADMINISTRATOR)) {
-                    throw new AccessDeniedException(String.format(
-                            "Unauthorized workflow transition: Action '%s' requires SENIOR_MANAGEMENT, COMMITTEE_MEMBER, or ADMINISTRATOR role.",
-                            normalizedAction
-                    ));
-                }
-            }
+            default -> throw new AccessDeniedException("Unsupported or unauthorized workflow action: " + normalizedAction);
         }
     }
 }

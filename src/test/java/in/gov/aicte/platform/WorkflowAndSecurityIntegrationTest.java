@@ -54,6 +54,9 @@ class WorkflowAndSecurityIntegrationTest {
     private WorkflowTransitionRepository workflowTransitionRepository;
 
     @Autowired
+    private in.gov.aicte.platform.application.checklist.ApplicationChecklistRepository checklistRepository;
+
+    @Autowired
     private in.gov.aicte.platform.application.deficiency.ApplicationDeficiencyRepository deficiencyRepository;
 
     @Autowired
@@ -80,10 +83,24 @@ class WorkflowAndSecurityIntegrationTest {
         mockMvc.perform(get("/api/v1/applications")
                         .header("Authorization", "Bearer " + tokenResponse.access_token()))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + tokenResponse.access_token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("USR-SO-01"));
+
+        mockMvc.perform(get("/api/v1/auth/me"))
+                .andExpect(status().isUnauthorized());
+
+        TokenRequest invalidIdentity = new TokenRequest("unknown@example.invalid", "unused", "Administrator");
+        mockMvc.perform(post("/api/v1/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidIdentity)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Malformed JSON request body returns 400 Bad Request ProblemDetail")
     void shouldReturn400ForMalformedJson() throws Exception {
         mockMvc.perform(post("/api/v1/institutions")
@@ -95,7 +112,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Parameter type mismatch returns 400 Bad Request ProblemDetail")
     void shouldReturn400ForParameterTypeMismatch() throws Exception {
         mockMvc.perform(get("/api/v1/applications")
@@ -107,7 +124,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Unsupported HTTP method returns 405 Method Not Allowed")
     void shouldReturn405ForUnsupportedMethod() throws Exception {
         mockMvc.perform(delete("/api/v1/institutions"))
@@ -117,7 +134,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Unsupported media type returns 415 Unsupported Media Type")
     void shouldReturn415ForUnsupportedMediaType() throws Exception {
         mockMvc.perform(post("/api/v1/institutions")
@@ -129,7 +146,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("JSON Escaping Regression: Names with quotes, backslashes, and line breaks serialize safely")
     void shouldHandleSpecialCharactersInAuditMetadataSafely() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -146,7 +163,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "scrutiny_officer")
+    @WithMockUser(username = "scrutiny_officer", roles = "ADMINISTRATOR")
     @DisplayName("End-to-End Workflow Transitions: RETURN_FOR_CORRECTION -> SUBMIT_CORRECTIONS -> COMPLETE_SCRUTINY")
     void shouldExecuteFullScrutinyLifecycleTransitions() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -166,6 +183,14 @@ class WorkflowAndSecurityIntegrationTest {
                 "Initial checklist pending verification"
         );
         Application savedApp = applicationRepository.save(app);
+
+        // Seed the dossier's statutory checklist; the workflow now requires explicit verification.
+        checklistRepository.saveAll(List.of(
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-LAND-01", "Land title verified", "APH Table 1.1 Norms", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-FACULTY-02", "Faculty cadre ratio verified", "APH Table 2.1 Norms", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-FIRE-03", "Fire safety NOC verified", "APH Norms Clause 3.4", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-LAB-04", "Laboratory facilities verified", "APH Norms Clause 4.2", false, null)
+        ));
 
         // 2. Action: RETURN_FOR_CORRECTION
         WorkflowActionRequest returnReq = new WorkflowActionRequest(
@@ -254,6 +279,29 @@ class WorkflowAndSecurityIntegrationTest {
                     .andExpect(status().isOk());
         }
 
+        // Verify each checklist item explicitly before attempting scrutiny completion.
+        for (String itemCode : List.of("CHK-LAND-01", "CHK-FACULTY-02", "CHK-FIRE-03", "CHK-LAB-04")) {
+            WorkflowActionRequest checklistReq = new WorkflowActionRequest(
+                    "UPDATE_CHECKLIST",
+                    "B. Singh",
+                    "Scrutiny Officer",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "Evidence reviewed and recorded.",
+                    itemCode,
+                    true
+            );
+            mockMvc.perform(post("/api/v1/applications/{id}/actions", savedApp.getApplicationReference())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(checklistReq)))
+                    .andExpect(status().isOk());
+        }
+
         // 6. NOW COMPLETE_SCRUTINY succeeds
         mockMvc.perform(post("/api/v1/applications/{id}/actions", savedApp.getApplicationReference())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -266,11 +314,13 @@ class WorkflowAndSecurityIntegrationTest {
 
         // 7. Verify database transition records
         List<WorkflowTransition> transitions = workflowTransitionRepository.findByApplicationIdOrderByCreatedAtDesc(savedApp.getId());
-        assertThat(transitions).hasSize(5);
+        assertThat(transitions).hasSize(9);
         assertThat(transitions.get(0).getAction()).isEqualTo("COMPLETE_SCRUTINY");
-        assertThat(transitions.get(1).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
-        assertThat(transitions.get(2).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
-        assertThat(transitions.get(3).getAction()).isEqualTo("SUBMIT_CORRECTIONS");
-        assertThat(transitions.get(4).getAction()).isEqualTo("RETURN_FOR_CORRECTION");
+        assertThat(transitions.subList(1, 5))
+                .allMatch(transition -> "UPDATE_CHECKLIST".equals(transition.getAction()));
+        assertThat(transitions.get(5).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
+        assertThat(transitions.get(6).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
+        assertThat(transitions.get(7).getAction()).isEqualTo("SUBMIT_CORRECTIONS");
+        assertThat(transitions.get(8).getAction()).isEqualTo("RETURN_FOR_CORRECTION");
     }
 }

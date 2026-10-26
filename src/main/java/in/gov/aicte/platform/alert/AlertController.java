@@ -63,7 +63,7 @@ public class AlertController {
     }
 
     @PostMapping("/{id}/escalate")
-    @PreAuthorize("hasAnyRole('REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'COMPLIANCE_REVIEWER', 'EVC_COORDINATOR', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR', 'USER')")
+    @PreAuthorize("hasAnyRole('REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'COMPLIANCE_REVIEWER', 'EVC_COORDINATOR', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR')")
     @Operation(summary = "Escalate alert", description = "Manually escalate breached regulatory SLA to higher bureaucratic tier")
     public ResponseEntity<AlertResponse> escalateAlert(
             @PathVariable String id,

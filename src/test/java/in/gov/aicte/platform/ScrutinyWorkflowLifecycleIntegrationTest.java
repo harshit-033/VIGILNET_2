@@ -76,7 +76,7 @@ class ScrutinyWorkflowLifecycleIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Phase 2: Complete Scrutiny & Deficiency Correction Lifecycle with Re-Scrutiny Resolution")
     void shouldExecuteEndToEndScrutinyLifecycle() throws Exception {
         String uid = UUID.randomUUID().toString().substring(0, 8);
@@ -92,6 +92,14 @@ class ScrutinyWorkflowLifecycleIntegrationTest {
         );
         app.setCurrentStage("Scrutiny");
         Application savedApp = applicationRepository.save(app);
+
+        // Seed all required checklist rows; completion below verifies them explicitly.
+        checklistRepository.saveAll(List.of(
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-LAND-01", "Land title deed verified", "APH Table 1.1 Norms", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-FACULTY-02", "Faculty cadre ratio verified", "APH Table 2.1 Norms", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-FIRE-03", "Fire safety NOC verified", "APH Norms Clause 3.4", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-LAB-04", "Laboratory facilities verified", "APH Norms Clause 4.2", false, null)
+        ));
 
         // Verify initial submission was created
         submissionRepository.save(new ApplicationSubmission(
@@ -256,6 +264,29 @@ class ScrutinyWorkflowLifecycleIntegrationTest {
         List<ApplicationDeficiency> resolvedDefs = deficiencyRepository.findByApplicationIdOrderByCreatedAtAsc(savedApp.getId());
         assertThat(resolvedDefs).allMatch(d -> "RESOLVED".equals(d.getStatus()));
 
+        // Verify the remaining checklist rows explicitly; scrutiny completion must not auto-certify them.
+        for (String itemCode : List.of("CHK-FACULTY-02", "CHK-FIRE-03", "CHK-LAB-04")) {
+            WorkflowActionRequest checklistReq = new WorkflowActionRequest(
+                    "UPDATE_CHECKLIST",
+                    "B. Singh",
+                    "Scrutiny Officer",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "Evidence checked and recorded during re-scrutiny.",
+                    itemCode,
+                    true
+            );
+            mockMvc.perform(post("/api/v1/applications/{id}/actions", savedApp.getId())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(checklistReq)))
+                    .andExpect(status().isOk());
+        }
+
         // 9. Scrutiny clearance: Transition to next stage (Regional Committee Review / EVC-Exempt)
         WorkflowActionRequest completeReq = new WorkflowActionRequest(
                 "COMPLETE_SCRUTINY",
@@ -286,10 +317,12 @@ class ScrutinyWorkflowLifecycleIntegrationTest {
 
         List<WorkflowTransition> transitions = workflowTransitionRepository.findByApplicationIdOrderByCreatedAtDesc(savedApp.getId());
         assertThat(transitions).isNotEmpty();
+        assertThat(checklistRepository.findByApplicationIdOrderByItemCodeAsc(savedApp.getId()))
+                .allMatch(item -> Boolean.TRUE.equals(item.getVerified()));
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Phase 2: Validation of invalid workflow actions and missing reasons")
     void shouldRejectInvalidWorkflowActions() throws Exception {
         String uid = UUID.randomUUID().toString().substring(0, 8);
@@ -339,4 +372,47 @@ class ScrutinyWorkflowLifecycleIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value(containsString("mandatory reason is required")));
     }
+
+    @Test
+    @WithMockUser(roles = "ADMINISTRATOR")
+    @DisplayName("Reject arbitrary workflow destinations and block completion with unchecked checklist items")
+    void shouldRejectUnsafeDestinationAndIncompleteChecklist() throws Exception {
+        String uid = UUID.randomUUID().toString().substring(0, 8);
+        Application app = new Application(
+                institution,
+                "APP-GUARD-" + uid,
+                "Extension of Approval (EoA)",
+                "2026-2027",
+                "In progress"
+        );
+        app.setCurrentStage("Scrutiny");
+        Application saved = applicationRepository.save(app);
+        checklistRepository.save(new in.gov.aicte.platform.application.checklist.ApplicationChecklist(
+                saved, "CHK-FIRE-03", "Fire safety NOC verified", "APH Norms Clause 3.4", false, null
+        ));
+
+        WorkflowActionRequest invalidDestination = new WorkflowActionRequest(
+                "COMPLETE_SCRUTINY", "B. Singh", "Scrutiny Officer",
+                "Attempt arbitrary route", null, null, "Administrator dashboard"
+        );
+        mockMvc.perform(post("/api/v1/applications/{id}/actions", saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidDestination)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(containsString("Unsupported next scrutiny stage")));
+
+        WorkflowActionRequest uncheckedChecklist = new WorkflowActionRequest(
+                "COMPLETE_SCRUTINY", "B. Singh", "Scrutiny Officer",
+                "Try to complete without verifying checklist", null, null, "EVC scheduling"
+        );
+        mockMvc.perform(post("/api/v1/applications/{id}/actions", saved.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(uncheckedChecklist)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value(containsString("remain unverified")));
+
+        assertThat(checklistRepository.findByApplicationIdOrderByItemCodeAsc(saved.getId()))
+                .allMatch(item -> !Boolean.TRUE.equals(item.getVerified()));
+    }
+
 }

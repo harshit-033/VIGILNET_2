@@ -38,6 +38,20 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/health").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                // ROLE_USER is a framework default, not an AICTE governance role.
+                .requestMatchers("/api/v1/**").hasAnyRole(
+                    "INSTITUTION_REPRESENTATIVE",
+                    "SCRUTINY_OFFICER",
+                    "REGIONAL_OFFICER",
+                    "EVC_COORDINATOR",
+                    "EVC_EXPERT",
+                    "COMPLIANCE_REVIEWER",
+                    "SENIOR_MANAGEMENT",
+                    "ADMINISTRATOR",
+                    "COMMITTEE_MEMBER",
+                    "LEGAL_OFFICER",
+                    "AUDITOR"
+                )
                 .anyRequest().authenticated()
             )
             .addFilterBefore(devBearerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
