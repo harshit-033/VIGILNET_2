@@ -54,6 +54,9 @@ class WorkflowAndSecurityIntegrationTest {
     private WorkflowTransitionRepository workflowTransitionRepository;
 
     @Autowired
+    private in.gov.aicte.platform.application.checklist.ApplicationChecklistRepository checklistRepository;
+
+    @Autowired
     private in.gov.aicte.platform.application.deficiency.ApplicationDeficiencyRepository deficiencyRepository;
 
     @Autowired
@@ -181,6 +184,14 @@ class WorkflowAndSecurityIntegrationTest {
         );
         Application savedApp = applicationRepository.save(app);
 
+        // Seed the dossier's statutory checklist; the workflow now requires explicit verification.
+        checklistRepository.saveAll(List.of(
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-LAND-01", "Land title verified", "APH Table 1.1 Norms", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-FACULTY-02", "Faculty cadre ratio verified", "APH Table 2.1 Norms", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-FIRE-03", "Fire safety NOC verified", "APH Norms Clause 3.4", false, null),
+                new in.gov.aicte.platform.application.checklist.ApplicationChecklist(savedApp, "CHK-LAB-04", "Laboratory facilities verified", "APH Norms Clause 4.2", false, null)
+        ));
+
         // 2. Action: RETURN_FOR_CORRECTION
         WorkflowActionRequest returnReq = new WorkflowActionRequest(
                 "RETURN_FOR_CORRECTION",
@@ -265,6 +276,29 @@ class WorkflowAndSecurityIntegrationTest {
             mockMvc.perform(post("/api/v1/applications/{id}/actions", savedApp.getApplicationReference())
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(resolveReq)))
+                    .andExpect(status().isOk());
+        }
+
+        // Verify each checklist item explicitly before attempting scrutiny completion.
+        for (String itemCode : List.of("CHK-LAND-01", "CHK-FACULTY-02", "CHK-FIRE-03", "CHK-LAB-04")) {
+            WorkflowActionRequest checklistReq = new WorkflowActionRequest(
+                    "UPDATE_CHECKLIST",
+                    "B. Singh",
+                    "Scrutiny Officer",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "Evidence reviewed and recorded.",
+                    itemCode,
+                    true
+            );
+            mockMvc.perform(post("/api/v1/applications/{id}/actions", savedApp.getApplicationReference())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(checklistReq)))
                     .andExpect(status().isOk());
         }
 
