@@ -80,10 +80,24 @@ class WorkflowAndSecurityIntegrationTest {
         mockMvc.perform(get("/api/v1/applications")
                         .header("Authorization", "Bearer " + tokenResponse.access_token()))
                 .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .header("Authorization", "Bearer " + tokenResponse.access_token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("USR-SO-01"));
+
+        mockMvc.perform(get("/api/v1/auth/me"))
+                .andExpect(status().isUnauthorized());
+
+        TokenRequest invalidIdentity = new TokenRequest("unknown@example.invalid", "unused", "Administrator");
+        mockMvc.perform(post("/api/v1/auth/token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidIdentity)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Malformed JSON request body returns 400 Bad Request ProblemDetail")
     void shouldReturn400ForMalformedJson() throws Exception {
         mockMvc.perform(post("/api/v1/institutions")
@@ -95,7 +109,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Parameter type mismatch returns 400 Bad Request ProblemDetail")
     void shouldReturn400ForParameterTypeMismatch() throws Exception {
         mockMvc.perform(get("/api/v1/applications")
@@ -107,7 +121,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Unsupported HTTP method returns 405 Method Not Allowed")
     void shouldReturn405ForUnsupportedMethod() throws Exception {
         mockMvc.perform(delete("/api/v1/institutions"))
@@ -117,7 +131,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("Error Handling Regression: Unsupported media type returns 415 Unsupported Media Type")
     void shouldReturn415ForUnsupportedMediaType() throws Exception {
         mockMvc.perform(post("/api/v1/institutions")
@@ -129,7 +143,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "ADMINISTRATOR")
     @DisplayName("JSON Escaping Regression: Names with quotes, backslashes, and line breaks serialize safely")
     void shouldHandleSpecialCharactersInAuditMetadataSafely() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
@@ -146,7 +160,7 @@ class WorkflowAndSecurityIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "scrutiny_officer")
+    @WithMockUser(username = "scrutiny_officer", roles = "ADMINISTRATOR")
     @DisplayName("End-to-End Workflow Transitions: RETURN_FOR_CORRECTION -> SUBMIT_CORRECTIONS -> COMPLETE_SCRUTINY")
     void shouldExecuteFullScrutinyLifecycleTransitions() throws Exception {
         String unique = UUID.randomUUID().toString().substring(0, 8);
