@@ -39,6 +39,15 @@ public class DocumentVersion {
     @Column(name = "uploaded_by", nullable = false, length = 128)
     private String uploadedBy;
 
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
+    private String extractedText;
+
+    @Column(name = "ocr_status", nullable = false, length = 32)
+    private String ocrStatus = "PENDING";
+
+    @Column(name = "ocr_message", columnDefinition = "TEXT")
+    private String ocrMessage;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -86,5 +95,11 @@ public class DocumentVersion {
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
     public String getUploadedBy() { return uploadedBy; }
     public void setUploadedBy(String uploadedBy) { this.uploadedBy = uploadedBy; }
+    public String getExtractedText() { return extractedText; }
+    public void setExtractedText(String extractedText) { this.extractedText = extractedText; }
+    public String getOcrStatus() { return ocrStatus; }
+    public void setOcrStatus(String ocrStatus) { this.ocrStatus = ocrStatus; }
+    public String getOcrMessage() { return ocrMessage; }
+    public void setOcrMessage(String ocrMessage) { this.ocrMessage = ocrMessage; }
     public Instant getCreatedAt() { return createdAt; }
 }
