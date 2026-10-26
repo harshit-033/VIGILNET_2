@@ -118,3 +118,17 @@ This milestone report documents the completion of the engineering milestone for 
 1. **Production Identity Provider**: `DevTokenService` provides trusted server-side role tokens for development/demo. Production deployment requires connecting to an enterprise OIDC/OAuth2 provider (Keycloak or Jan Parichay).
 2. **External Notification Gateways**: `DevMockNotificationDeliveryAdapter` reliably simulates success and failure scenarios for local testing. Production requires SMS/Email gateway bindings.
 3. **Cloud Object Storage**: Local disk storage can be migrated to S3/MinIO via Spring Cloud AWS or MinIO Java SDK for multi-node deployments.
+
+
+---
+
+## Follow-on implementation: real document upload and OCR
+
+**Work branch:** `feat/document-upload-ocr`  
+**Base commit:** `eb75fd1cbb31f9b39ab18bab948f6315a245a58e`
+
+The document registry follow-on adds an explicit real-file upload requirement (no generated placeholder PDF), upload-size validation, a visible OCR output/status panel, database fields for extracted text and OCR status on document/version records (Flyway V8), PDF text extraction with PDFBox, and Tesseract OCR for scanned PDFs and PNG/JPEG files. It also corrects renewal form parameter names and accepts institution identifiers without stripping them into an unrelated numeric ID.
+
+**Deployment prerequisite:** Install Tesseract and the required language data on the backend host for scanned-image OCR. When unavailable, the upload reports `OCR_UNAVAILABLE`; the file is not falsely marked as OCR-complete. OCR text is not a document-validity determination.
+
+**Verification state:** The code and regression test were added on the feature branch. CI and end-to-end browser verification for this follow-on must be checked separately; do not treat this addendum as a claim that those checks have passed.
