@@ -67,6 +67,15 @@ public class DocumentRecord {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "extracted_text", columnDefinition = "TEXT")
+    private String extractedText;
+
+    @Column(name = "ocr_status", nullable = false, length = 32)
+    private String ocrStatus = "PENDING";
+
+    @Column(name = "ocr_message", columnDefinition = "TEXT")
+    private String ocrMessage;
+
     @Column(name = "version_number", nullable = false)
     private Integer versionNumber = 1;
 
@@ -163,6 +172,12 @@ public class DocumentRecord {
     public void setReviewer(String reviewer) { this.reviewer = reviewer; }
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
+    public String getExtractedText() { return extractedText; }
+    public void setExtractedText(String extractedText) { this.extractedText = extractedText; }
+    public String getOcrStatus() { return ocrStatus; }
+    public void setOcrStatus(String ocrStatus) { this.ocrStatus = ocrStatus; }
+    public String getOcrMessage() { return ocrMessage; }
+    public void setOcrMessage(String ocrMessage) { this.ocrMessage = ocrMessage; }
     public Integer getVersionNumber() { return versionNumber; }
     public void setVersionNumber(Integer versionNumber) { this.versionNumber = versionNumber; }
     public String getUploadedBy() { return uploadedBy; }
