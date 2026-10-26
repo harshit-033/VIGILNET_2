@@ -40,6 +40,7 @@ export const DocumentsPage = () => {
   } = useData();
 
   const isInstitutionRep = role === ROLES.INSTITUTION_REP;
+  const canUploadDocuments = [ROLES.INSTITUTION_REP, ROLES.REGIONAL_OFFICER, ROLES.ADMINISTRATOR].includes(role);
   const isAuthorizedReviewer = [
     ROLES.COMPLIANCE_REVIEWER,
     ROLES.REGIONAL_OFFICER,
@@ -293,9 +294,11 @@ export const DocumentsPage = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button onClick={handleOpenUploadModal} className="btn btn-primary" type="button">
-            <Upload size={14} /> Upload Document &amp; Extract Text
-          </button>
+          {canUploadDocuments && (
+            <button onClick={handleOpenUploadModal} className="btn btn-primary" type="button">
+              <Upload size={14} /> Upload Document &amp; Extract Text
+            </button>
+          )}
         </div>
       </div>
 
@@ -638,7 +641,7 @@ export const DocumentsPage = () => {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary" disabled={isUploading || !uploadFile}>
-              <Upload size={14} /> {isUploading ? 'Uploading &amp; extracting text…' : 'Upload Document &amp; Run OCR'}
+              <Upload size={14} /> {isUploading ? 'Uploading & extracting text…' : 'Upload Document &amp; Run OCR'}
             </button>
           </div>
         </form>
@@ -874,45 +877,12 @@ export const DocumentsPage = () => {
                       />
                     </div>
                   ) : (
-                    /* AICTE Official Statutory Document Certificate Visualizer */
-                    <div
-                      style={{
-                        border: '2px dashed #B8D4EA',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '16px',
-                        background: '#FAFDFE',
-                        position: 'relative',
-                      }}
-                    >
-                      <div style={{ textAlign: 'center', borderBottom: '1px solid #D5E4F0', paddingBottom: '10px', marginBottom: '12px' }}>
-                        <div style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.12em', color: '#1B527A', textTransform: 'uppercase' }}>
-                          GOVERNMENT OF INDIA · ALL INDIA COUNCIL FOR TECHNICAL EDUCATION
-                        </div>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--color-navy)', marginTop: '2px' }}>
-                          CERTIFICATE OF STATUTORY RECORD VALIDATION
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
-                        <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
-                          <div><strong>Registered Instrument:</strong> {selectedDoc.category}</div>
-                          <div><strong>Depository Reference:</strong> {selectedDoc.id} (Version {selectedDoc.currentVersion || 'v1.0'})</div>
-                          <div><strong>Issuing Authority:</strong> Certified Government Department / Revenue Authority</div>
-                          <div><strong>Validity Window:</strong> {selectedDoc.issueDate || 'Recorded'} to {selectedDoc.expiryDate}</div>
-                          <div style={{ marginTop: '6px', color: 'var(--color-text-muted)' }}>
-                            <strong>Official Note:</strong> {selectedDoc.notes || 'Verified against Approval Process Handbook statutory norms.'}
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 'var(--radius-sm)', padding: '10px' }}>
-                          <ShieldCheck size={36} style={{ color: 'var(--color-teal)', marginBottom: '4px' }} />
-                          <div style={{ fontSize: '9px', fontWeight: '800', color: 'var(--color-navy)', textAlign: 'center' }}>
-                            AICTE COMPLIANCE AUDIT SEAL
-                          </div>
-                          <div style={{ fontSize: '8px', color: 'var(--color-text-muted)', textAlign: 'center' }}>
-                            QR CODE VERIFIED
-                          </div>
-                        </div>
+                    /* Original file is stored on the server; do not show a fabricated certificate or audit seal. */
+                    <div style={{ border: '1px dashed #B8D4EA', borderRadius: 'var(--radius-sm)', padding: '16px', background: '#FAFDFE', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                      <Info size={18} style={{ color: 'var(--color-teal)', flexShrink: 0 }} />
+                      <div style={{ fontSize: '11px', lineHeight: 1.6, color: 'var(--color-text-muted)' }}>
+                        <strong style={{ color: 'var(--color-navy)' }}>Original document not loaded in preview.</strong>
+                        <div>The uploaded file is stored on the server. Use “Download Official File” above to inspect the original. Extracted text and OCR status are shown in the panel above.</div>
                       </div>
                     </div>
                   )}
