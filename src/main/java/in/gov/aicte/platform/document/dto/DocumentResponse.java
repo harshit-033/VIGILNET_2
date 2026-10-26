@@ -30,7 +30,10 @@ public record DocumentResponse(
         Integer versionNumber,
         String uploadedBy,
         Instant createdAt,
-        List<DocumentVersionResponse> versions
+        List<DocumentVersionResponse> versions,
+        String ocrStatus,
+        String ocrMessage,
+        String extractedText
 ) {
     public static DocumentResponse from(DocumentRecord doc) {
         String instIdent = (doc.getInstitution() != null) ? doc.getInstitution().getInstitutionalIdentifier() : null;
@@ -71,7 +74,10 @@ public record DocumentResponse(
                 doc.getVersionNumber(),
                 doc.getUploadedBy(),
                 doc.getCreatedAt(),
-                versionList
+                versionList,
+                doc.getOcrStatus(),
+                doc.getOcrMessage(),
+                doc.getExtractedText()
         );
     }
 
