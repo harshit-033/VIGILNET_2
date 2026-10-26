@@ -262,3 +262,30 @@ The database schema is managed via automated Flyway migrations:
 3. **Storage Engine (`FileStorageService`)**:
    - Uploaded compliance evidence and institutional documents are written to the local filesystem (`target/storage` or configured disk path).
    - In multi-instance or cloud production environments, configure an S3-compliant object store (AWS S3, MinIO) with server-side encryption.
+
+
+## Document upload and OCR
+
+Open **Document Registry** at `/documents`, choose **Upload Document & Extract Text**, select a real PDF, PNG, or JPEG file, and submit it. The upload does not create a placeholder file when no file is selected. The backend stores the original file in its configured storage directory, computes SHA-256, and records OCR output and status against the document and version.
+
+- Text-based PDF files: extract selectable text with PDFBox.
+- Scanned PDF files: render up to the configured page limit and run Tesseract OCR on each rendered page.
+- PNG/JPEG files: run Tesseract OCR directly.
+- Output: open **View** on the document to see **OCR / Extracted Document Text**, status and diagnostic message.
+
+### OCR prerequisites
+
+Tesseract must be installed on the backend host for scanned PDF/image OCR. On Arch Linux, install `tesseract` and the language data package, for example `sudo pacman -S tesseract tesseract-data-eng`. On Debian/Ubuntu, run `sudo apt install tesseract-ocr tesseract-ocr-eng`. Validate with `tesseract --version`. If Tesseract is missing, upload/storage can still succeed but OCR is marked `OCR_UNAVAILABLE`; it is not reported as successful extraction.
+
+Configuration environment variables (also listed in `.env.example`):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MAX_UPLOAD_FILE_SIZE` | `25MB` | Max size of each uploaded file |
+| `MAX_UPLOAD_REQUEST_SIZE` | `26MB` | Multipart request size limit |
+| `TESSERACT_CMD` | `tesseract` | Tesseract executable path |
+| `OCR_LANGUAGE` | `eng` | Installed Tesseract language code(s), e.g. `eng` or `eng+hin` |
+| `OCR_MAX_PDF_PAGES` | `10` | Maximum scanned PDF pages processed per upload |
+| `OCR_TIMEOUT_SECONDS` | `45` | Maximum runtime per Tesseract invocation |
+
+The OCR pipeline is an extraction aid only; it does not certify a document's authenticity or make an approval decision. Read the stored document carefully and have the authorized reviewer verify it.
