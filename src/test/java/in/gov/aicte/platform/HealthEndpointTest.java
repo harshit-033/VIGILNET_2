@@ -33,7 +33,7 @@ class HealthEndpointTest {
                 .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"))
-                .andExpect(jsonPath("$.application").value("aicte-compliance-platform"))
+                .andExpect(jsonPath("$.application").value("sage-compliance-platform"))
                 .andExpect(jsonPath("$.timestamp").exists());
     }
 

@@ -59,20 +59,20 @@ export const LoginPage = () => {
         <div className="login-branding">
           <div>
             <div className="login-brand-top">
-              <div className="login-brand-logo">A</div>
+              <div className="login-brand-logo" aria-label="SAGE Logo">S</div>
               <div>
                 <div style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.08em', color: '#9BB4CD' }}>
-                  GOVERNMENT OF INDIA
+                  SIH PROBLEM STATEMENT 26262
                 </div>
                 <div style={{ fontSize: '14px', fontWeight: '800', color: '#FFFFFF' }}>
-                  AICTE APPROVAL &amp; COMPLIANCE
+                  SAGE PLATFORM
                 </div>
               </div>
             </div>
 
-            <h1>Approval &amp; Compliance Orchestration Platform</h1>
+            <h1>System for Approval Governance and Evaluation</h1>
             <p>
-              Smart India Hackathon SIH 26262 · An orchestrated, accountable, and auditable governance system for technical education approval workflows.
+              SAGE · AICTE Approval and Compliance Platform | SIH Problem Statement 26262 · An orchestrated, accountable, and auditable governance platform for technical education approvals and compliance.
             </p>
           </div>
 

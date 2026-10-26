@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# AICTE Approval & Compliance Orchestration Platform (PS 26262)
-# Master Service Runner: Database -> Backend -> Frontend
+# SAGE — System for Approval Governance and Evaluation
+# AICTE Approval and Compliance Platform | SIH Problem Statement 26262
+# Master Service Runner: Database -> Spring Boot Backend -> Vite React Frontend
 # ==============================================================================
 
 set -eo pipefail
@@ -9,21 +10,95 @@ set -eo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$PROJECT_ROOT"
 
-# Ensure runtime paths and environment
-export JAVA_HOME="${JAVA_HOME:-/home/Harshit/.local/share/junie/versions/3419.22/junie-app/lib/runtime}"
-export PATH="$HOME/.local/bin:$JAVA_HOME/bin:$PATH"
-export LD_LIBRARY_PATH="$HOME/.local/lib:${LD_LIBRARY_PATH}"
+# Colors
+C_RESET='\033[0m'
+C_BOLD='\033[1m'
+C_GREEN='\033[32m'
+C_BLUE='\033[34m'
+C_YELLOW='\033[33m'
+C_CYAN='\033[36m'
+C_RED='\033[31m'
+
+echo -e "${C_BOLD}${C_BLUE}==============================================================================${C_RESET}"
+echo -e "${C_BOLD}${C_CYAN}    SAGE — System for Approval Governance and Evaluation${C_RESET}"
+echo -e "${C_BOLD}${C_BLUE}    AICTE Approval & Compliance Platform | SIH Problem Statement 26262${C_RESET}"
+echo -e "${C_BOLD}${C_BLUE}==============================================================================${C_RESET}"
+
+# ------------------------------------------------------------------------------
+# 0. Locate and Validate Java 21
+# ------------------------------------------------------------------------------
+find_java21() {
+  # 1. If JAVA_HOME is already set, verify it
+  if [ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ]; then
+    local v
+    v=$("$JAVA_HOME/bin/java" -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
+    if [ "$v" = "21" ]; then
+      echo "$JAVA_HOME"
+      return 0
+    fi
+  fi
+
+  # 2. If 'java' is on PATH, test if it is version 21
+  if command -v java >/dev/null 2>&1; then
+    local v
+    v=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
+    if [ "$v" = "21" ]; then
+      local jpath
+      jpath=$(command -v java)
+      local realj
+      realj=$(readlink -f "$jpath")
+      dirname "$(dirname "$realj")"
+      return 0
+    fi
+  fi
+
+  # 3. Check well-known Linux directories (Arch Linux, Ubuntu, Fedora, user runtimes)
+  for candidate in \
+    "/usr/lib/jvm/java-21-openjdk" \
+    "/usr/lib/jvm/default" \
+    "/usr/lib/jvm/java-21" \
+    "$HOME/.local/share/junie/versions/"*"/junie-app/lib/runtime"; do
+    if [ -d "$candidate" ] && [ -x "$candidate/bin/java" ]; then
+      local v
+      v=$("$candidate/bin/java" -version 2>&1 | awk -F '"' '/version/ {print $2}' | cut -d'.' -f1)
+      if [ "$v" = "21" ]; then
+        echo "$candidate"
+        return 0
+      fi
+    fi
+  done
+
+  return 1
+}
+
+DETECTED_JAVA_HOME=$(find_java21 || true)
+if [ -z "$DETECTED_JAVA_HOME" ]; then
+  echo -e "${C_RED}✗ Java 21 was not found on your system or in JAVA_HOME.${C_RESET}"
+  echo -e "Please install OpenJDK 21 (e.g. 'sudo pacman -S jdk21-openjdk' on Arch or 'sudo apt install openjdk-21-jdk') and set JAVA_HOME."
+  exit 1
+fi
+
+export JAVA_HOME="$DETECTED_JAVA_HOME"
+export PATH="$JAVA_HOME/bin:$HOME/.local/bin:$PATH"
+
+if [ -d "$HOME/.local/lib" ]; then
+  export LD_LIBRARY_PATH="$HOME/.local/lib:${LD_LIBRARY_PATH:-}"
+fi
+
 export PGDATA="${PGDATA:-$HOME/.local/share/aicte_postgres_data}"
 
-# Ensure .env exists
+echo -e "${C_GREEN}✓ Using Java 21 from: ${JAVA_HOME}${C_RESET}"
+
+# ------------------------------------------------------------------------------
+# Environment Variables & Configuration
+# ------------------------------------------------------------------------------
 if [ ! -f "$PROJECT_ROOT/.env" ]; then
   if [ -f "$PROJECT_ROOT/.env.example" ]; then
-    echo -e "⚙️ Creating .env from .env.example..."
+    echo -e "⚙️ Creating .env from .env.example with standard local development defaults..."
     sed 's/your_secure_db_password_here/aicte_123/' "$PROJECT_ROOT/.env.example" > "$PROJECT_ROOT/.env"
   fi
 fi
 
-# Load local environment variables if .env exists
 if [ -f "$PROJECT_ROOT/.env" ]; then
   # shellcheck source=/dev/null
   set -a
@@ -37,40 +112,50 @@ DB_USER="${DB_USER:-aicte_app_user}"
 DB_NAME="${DB_NAME:-aicte_platform_db}"
 SERVER_PORT="${SERVER_PORT:-8080}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+FRONTEND_HOST="${FRONTEND_HOST:-localhost}"
 
-# Colors
-C_RESET='\033[0m'
-C_BOLD='\033[1m'
-C_GREEN='\033[32m'
-C_BLUE='\033[34m'
-C_YELLOW='\033[33m'
-C_CYAN='\033[36m'
-C_RED='\033[31m'
-
-echo -e "${C_BOLD}${C_BLUE}==============================================================================${C_RESET}"
-echo -e "${C_BOLD}${C_CYAN}    AICTE Approval & Compliance Orchestration Platform (SIH 26262)${C_RESET}"
-echo -e "${C_BOLD}${C_BLUE}==============================================================================${C_RESET}"
-
-# PID tracking for clean teardown
+# PID tracking for clean teardown - track ONLY processes launched by this script
 BACKEND_PID=""
 FRONTEND_PID=""
 
 cleanup() {
   echo ""
-  echo -e "${C_YELLOW}>>> Initiating graceful shutdown of all platform services...${C_RESET}"
+  echo -e "${C_YELLOW}>>> Initiating graceful shutdown of SAGE services...${C_RESET}"
   if [ -n "$FRONTEND_PID" ] && kill -0 "$FRONTEND_PID" 2>/dev/null; then
     echo -e "Stopping Frontend (PID: $FRONTEND_PID)..."
-    kill "$FRONTEND_PID" 2>/dev/null || true
+    kill -TERM "$FRONTEND_PID" 2>/dev/null || true
   fi
   if [ -n "$BACKEND_PID" ] && kill -0 "$BACKEND_PID" 2>/dev/null; then
     echo -e "Stopping Backend (PID: $BACKEND_PID)..."
-    kill "$BACKEND_PID" 2>/dev/null || true
+    kill -TERM "$BACKEND_PID" 2>/dev/null || true
   fi
-  echo -e "${C_GREEN}>>> All services stopped cleanly.${C_RESET}"
+  echo -e "${C_GREEN}>>> SAGE platform services stopped cleanly.${C_RESET}"
   exit 0
 }
 
 trap cleanup SIGINT SIGTERM EXIT
+
+# Port conflict checking helper - NEVER kills arbitrary processes
+check_port_available() {
+  local port="$1"
+  local svc_name="$2"
+  local conflict_pid=""
+
+  if command -v lsof >/dev/null 2>&1; then
+    conflict_pid=$(lsof -ti:"${port}" 2>/dev/null || true)
+  elif command -v ss >/dev/null 2>&1; then
+    conflict_pid=$(ss -lptn "sport = :${port}" 2>/dev/null | grep -o 'pid=[0-9]*' | head -n1 | cut -d'=' -f2 || true)
+  elif command -v fuser >/dev/null 2>&1; then
+    conflict_pid=$(fuser "${port}/tcp" 2>/dev/null || true)
+  fi
+
+  if [ -n "$conflict_pid" ]; then
+    echo -e "${C_RED}✗ Port ${port} required for ${svc_name} is already occupied by process (PID: ${conflict_pid}).${C_RESET}"
+    echo -e "Please stop the conflicting process or change the port configuration in .env before running."
+    return 1
+  fi
+  return 0
+}
 
 # ------------------------------------------------------------------------------
 # 1. Start / Verify PostgreSQL Database
@@ -81,7 +166,6 @@ is_db_ready() {
   if command -v pg_isready >/dev/null 2>&1; then
     pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" >/dev/null 2>&1
   else
-    # Fallback socket test via bash/nc
     timeout 1 bash -c "cat < /dev/null > /dev/tcp/${DB_HOST}/${DB_PORT}" 2>/dev/null
   fi
 }
@@ -91,15 +175,12 @@ if is_db_ready; then
 else
   echo -e "${C_YELLOW}! PostgreSQL is not currently running. Attempting startup...${C_RESET}"
 
-  if command -v docker >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
-    echo -e "Starting PostgreSQL container via docker compose..."
-    docker compose up -d postgres || true
-  elif [ -d "$PGDATA" ] && command -v pg_ctl >/dev/null 2>&1; then
+  if [ -d "$PGDATA" ] && command -v pg_ctl >/dev/null 2>&1; then
     echo -e "Starting local PostgreSQL server from $PGDATA..."
     pg_ctl -D "$PGDATA" -l "$PGDATA/server.log" start || true
-  elif command -v docker-compose >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
-    echo -e "Starting PostgreSQL container via docker-compose..."
-    docker-compose up -d postgres || true
+  elif command -v docker >/dev/null 2>&1 && docker ps >/dev/null 2>&1; then
+    echo -e "Starting PostgreSQL container via docker compose..."
+    docker compose up -d postgres || true
   elif command -v systemctl >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
     echo -e "Starting system PostgreSQL service..."
     sudo systemctl start postgresql 2>/dev/null || true
@@ -122,27 +203,21 @@ else
     echo -e "${C_GREEN}✓ PostgreSQL database is now ready.${C_RESET}"
   else
     echo -e "${C_RED}✗ Unable to connect to PostgreSQL at ${DB_HOST}:${DB_PORT}.${C_RESET}"
-    echo -e "Please ensure PostgreSQL is started with credentials matching .env or compose.yaml."
+    echo -e "Please verify your database service and credentials matching .env or compose.yaml."
     exit 1
   fi
 fi
 
 # ------------------------------------------------------------------------------
-# 2. Start Spring Boot Backend
+# 2. Check Port and Start Spring Boot Backend
 # ------------------------------------------------------------------------------
 echo -e "\n${C_BOLD}[2/3] Starting Spring Boot Backend API (Port: ${SERVER_PORT})...${C_RESET}"
 
-# Free port 8080 if an old instance is lingering
-if command -v fuser >/dev/null 2>&1; then
-  fuser -k "${SERVER_PORT}/tcp" 2>/dev/null || true
-elif command -v lsof >/dev/null 2>&1; then
-  OLD_PID=$(lsof -ti:"${SERVER_PORT}" 2>/dev/null || true)
-  if [ -n "$OLD_PID" ]; then
-    kill -9 "$OLD_PID" 2>/dev/null || true
-  fi
+if ! check_port_available "${SERVER_PORT}" "Spring Boot Backend"; then
+  exit 1
 fi
 
-# Launch backend in background
+chmod +x ./mvnw
 ./mvnw spring-boot:run &
 BACKEND_PID=$!
 echo -e "Spring Boot starting in background (PID: ${BACKEND_PID})..."
@@ -157,7 +232,7 @@ for _ in {1..60}; do
     break
   fi
   if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
-    echo -e "\n${C_RED}✗ Spring Boot process exited unexpectedly. Check logs for details.${C_RESET}"
+    echo -e "\n${C_RED}✗ Spring Boot process exited unexpectedly. Check target/ logs for details.${C_RESET}"
     exit 1
   fi
   echo -n "."
@@ -173,25 +248,27 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Start Vite React Frontend
+# 3. Check Port and Start Vite React Frontend
 # ------------------------------------------------------------------------------
 echo -e "\n${C_BOLD}[3/3] Starting Vite React Frontend (Port: ${FRONTEND_PORT})...${C_RESET}"
 
-# Free frontend port if lingering
-if command -v fuser >/dev/null 2>&1; then
-  fuser -k "${FRONTEND_PORT}/tcp" 2>/dev/null || true
+if ! check_port_available "${FRONTEND_PORT}" "React Frontend"; then
+  exit 1
 fi
 
 cd "$PROJECT_ROOT/frontend"
 
-# Ensure dependencies are installed
 if [ ! -d "node_modules" ]; then
   echo -e "Installing frontend npm dependencies..."
   npm install
 fi
 
-# Start frontend development server in background
-npm run dev -- --host 0.0.0.0 --port "${FRONTEND_PORT}" &
+# Start frontend development server in background - binds to localhost by default
+if [ "$FRONTEND_HOST" = "0.0.0.0" ]; then
+  npm run dev -- --host 0.0.0.0 --port "${FRONTEND_PORT}" &
+else
+  npm run dev -- --port "${FRONTEND_PORT}" &
+fi
 FRONTEND_PID=$!
 cd "$PROJECT_ROOT"
 
@@ -222,7 +299,7 @@ fi
 # Platform Ready Summary
 # ------------------------------------------------------------------------------
 echo -e "\n${C_BOLD}${C_GREEN}==============================================================================${C_RESET}"
-echo -e "${C_BOLD}${C_GREEN}    🚀 AICTE Approval & Compliance Platform is FULLY OPERATIONAL${C_RESET}"
+echo -e "${C_BOLD}${C_GREEN}    🚀 SAGE — System for Approval Governance and Evaluation is OPERATIONAL${C_RESET}"
 echo -e "${C_BOLD}${C_GREEN}==============================================================================${C_RESET}"
 echo -e "${C_BOLD}• Frontend UI:${C_RESET}        ${C_CYAN}http://localhost:${FRONTEND_PORT}${C_RESET}"
 echo -e "${C_BOLD}• Backend REST API:${C_RESET}   ${C_CYAN}http://localhost:${SERVER_PORT}${C_RESET}"

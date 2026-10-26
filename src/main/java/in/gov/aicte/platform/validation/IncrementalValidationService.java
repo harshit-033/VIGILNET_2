@@ -202,7 +202,7 @@ public class IncrementalValidationService {
         if ("AI_ASSISTED_ADVISORY".equalsIgnoreCase(rule.decisionType())) {
             return new ValidationResult(
                     "PASSED",
-                    "AI Automated Risk Index: 0.12 (Low Risk). NOTE: Non-binding algorithmic assessment for officer guidance only; human scrutiny decision required."
+                    "DEMO HEURISTIC ADVISORY (Demo Score: 0.12 Low Risk). NOTE: Non-binding algorithmic assessment for officer guidance only; does not represent an authoritative AICTE regulatory determination. Human Scrutiny Officer evaluation required."
             );
         }
 

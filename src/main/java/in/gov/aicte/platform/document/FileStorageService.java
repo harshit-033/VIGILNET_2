@@ -18,12 +18,17 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(FileStorageService.class);
+
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            "pdf", "png", "jpg", "jpeg", "docx", "xlsx", "csv", "txt"
+    );
 
     private final Path rootLocation;
 
@@ -57,6 +62,19 @@ public class FileStorageService {
 
         // Sanitize filename
         String cleanName = Paths.get(originalFilename).getFileName().toString().replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        // Validate allowed file types for statutory compliance and document registry
+        String ext = "";
+        int dotIndex = cleanName.lastIndexOf('.');
+        if (dotIndex > 0 && dotIndex < cleanName.length() - 1) {
+            ext = cleanName.substring(dotIndex + 1).toLowerCase();
+        }
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException(
+                    "Unsupported file extension '." + ext + "'. Permitted statutory document formats are: PDF, PNG, JPG, JPEG, DOCX, XLSX, CSV, and TXT."
+            );
+        }
+
         String uniqueFileName = UUID.randomUUID() + "_" + cleanName;
         Path destinationFile = this.rootLocation.resolve(uniqueFileName).normalize();
 

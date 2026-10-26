@@ -54,7 +54,7 @@ public class ComplianceController {
 
     @PostMapping("/{id}/submit")
     @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR')")
-    @Operation(summary = "Submit compliance evidence", description = "Upload affidavit or evidence proof for a condition")
+    @Operation(summary = "Submit compliance evidence (Metadata)", description = "Submit compliance evidence metadata for a condition")
     public ResponseEntity<ComplianceResponse> submitEvidence(
             @PathVariable String id,
             @Valid @RequestBody SubmitComplianceEvidenceRequest request,
@@ -62,6 +62,42 @@ public class ComplianceController {
     ) {
         String actorId = (principal != null) ? principal.getName() : "SYSTEM";
         return ResponseEntity.ok(complianceService.submitEvidence(id, request, actorId));
+    }
+
+    @PostMapping(value = "/{id}/evidence", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasAnyRole('INSTITUTION_REPRESENTATIVE', 'ADMINISTRATOR')")
+    @Operation(summary = "Upload compliance evidence file", description = "Upload physical evidence proof file (PDF, image, document) for a statutory condition")
+    public ResponseEntity<ComplianceResponse> uploadEvidence(
+            @PathVariable String id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "actorName", required = false) String actorName,
+            Principal principal
+    ) throws java.io.IOException {
+        String actorId = (principal != null) ? principal.getName() : "SYSTEM";
+        return ResponseEntity.ok(complianceService.uploadEvidence(id, file, notes, actorName, actorId));
+    }
+
+    @GetMapping("/{id}/evidence/download")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Download compliance evidence file", description = "Stream uploaded statutory evidence proof from durable storage")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadEvidence(@PathVariable String id) {
+        ComplianceResponse obl = complianceService.getObligationByIdOrReference(id);
+        org.springframework.core.io.Resource resource = complianceService.loadEvidenceResource(id);
+
+        org.springframework.http.MediaType mediaType;
+        try {
+            mediaType = obl.mimeType() != null ? org.springframework.http.MediaType.parseMediaType(obl.mimeType()) : org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+        } catch (Exception e) {
+            mediaType = org.springframework.http.MediaType.APPLICATION_OCTET_STREAM;
+        }
+
+        String filename = obl.evidenceFile() != null ? obl.evidenceFile() : "evidence_" + id + ".pdf";
+
+        return ResponseEntity.ok()
+                .contentType(mediaType)
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .body(resource);
     }
 
     @PostMapping("/{id}/under-verification")

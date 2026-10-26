@@ -86,7 +86,7 @@ export const AdministratorDashboard = () => {
               SYSTEM CONFIGURATION &amp; PLATFORM ADMINISTRATION
             </div>
             <h1 style={{ fontSize: '20px', color: 'var(--color-navy)', margin: '4px 0 2px', fontWeight: '800' }}>
-              AICTE Core Platform Administration
+              SAGE Platform Administration
             </h1>
             <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
               Administrator: {user?.name || 'System Administrator'} · Connected to Spring Boot Core API (Port 8080) &amp; PostgreSQL
@@ -117,7 +117,7 @@ export const AdministratorDashboard = () => {
         <KPICard
           title="Backend Service"
           value={healthStatus?.status || (healthLoading ? 'Checking...' : 'DOWN')}
-          subtitle={healthStatus?.application || 'aicte-compliance-platform'}
+          subtitle={healthStatus?.application || 'sage-compliance-platform'}
           iconName="Server"
           tint={healthStatus?.status === 'UP' ? 'green' : 'red'}
         />
@@ -188,7 +188,7 @@ export const AdministratorDashboard = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', fontSize: '12px' }}>
               <div>
                 <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Service Name</span>
-                <strong>{healthStatus.application || 'aicte-compliance-platform'}</strong>
+                <strong>{healthStatus.application || 'sage-compliance-platform'}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--color-text-muted)', display: 'block', fontSize: '11px' }}>Service Health</span>

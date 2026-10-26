@@ -36,13 +36,25 @@ class PostgresPersistenceIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("Verify Flyway V1 migration history in PostgreSQL")
+    @DisplayName("Verify Flyway V1 through V7 migration history in PostgreSQL")
     void shouldVerifyFlywayMigrationStatus() {
-        Integer count = jdbcTemplate.queryForObject(
+        Integer countV1 = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '1' AND success = true",
                 Integer.class
         );
-        assertThat(count).isNotNull().isEqualTo(1);
+        assertThat(countV1).isNotNull().isEqualTo(1);
+
+        Integer countV7 = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '7' AND success = true",
+                Integer.class
+        );
+        assertThat(countV7).isNotNull().isEqualTo(1);
+
+        Integer totalSuccess = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history WHERE success = true",
+                Integer.class
+        );
+        assertThat(totalSuccess).isNotNull().isGreaterThanOrEqualTo(7);
     }
 
     @Test

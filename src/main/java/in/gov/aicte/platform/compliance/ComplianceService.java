@@ -31,17 +31,20 @@ public class ComplianceService {
     private final AuditEventRepository auditEventRepository;
     private final SecurityUtils securityUtils;
     private final ObjectMapper objectMapper;
+    private final in.gov.aicte.platform.document.FileStorageService fileStorageService;
 
     public ComplianceService(
             ComplianceObligationRepository obligationRepository,
             AuditEventRepository auditEventRepository,
             SecurityUtils securityUtils,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            in.gov.aicte.platform.document.FileStorageService fileStorageService
     ) {
         this.obligationRepository = obligationRepository;
         this.auditEventRepository = auditEventRepository;
         this.securityUtils = securityUtils;
         this.objectMapper = objectMapper;
+        this.fileStorageService = fileStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -165,6 +168,67 @@ public class ComplianceService {
 
         log.info("Compliance evidence submitted for obligation={} by actor={}", saved.getObligationReference(), actorDisplay);
         return ComplianceResponse.from(saved);
+    }
+
+    @Transactional
+    public ComplianceResponse uploadEvidence(
+            String idOrReference,
+            org.springframework.web.multipart.MultipartFile file,
+            String notes,
+            String actorName,
+            String actorId
+    ) throws java.io.IOException {
+        ComplianceObligation obl = findObligation(idOrReference);
+        securityUtils.assertInstitutionAccess(obl.getInstitution());
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Cannot upload empty evidence file.");
+        }
+
+        String effectiveActor = (actorId != null && !actorId.isBlank()) ? actorId : "SYSTEM";
+        String actorDisplay = (actorName != null && !actorName.isBlank()) ? actorName : effectiveActor;
+
+        in.gov.aicte.platform.document.FileStorageService.StoredFile stored = fileStorageService.store(file);
+
+        obl.setStatus("Evidence submitted");
+        obl.setEvidenceFile(stored.originalFileName());
+        obl.setEvidenceHash(stored.sha256Hash());
+        obl.setStoragePath(stored.storagePath());
+        obl.setMimeType(stored.mimeType());
+        obl.setFileSizeBytes(stored.sizeBytes());
+        if (notes != null && !notes.isBlank()) {
+            obl.setEvidenceNotes(notes.trim());
+        }
+        obl.setSubmittedDate(LocalDate.now());
+        obl.setSubmittedBy(actorDisplay);
+
+        ComplianceObligation saved = obligationRepository.save(obl);
+
+        saveAuditEvent("COMPLIANCE_EVIDENCE_UPLOADED", effectiveActor, "COMPLIANCE_OBLIGATION", saved.getObligationReference(), Map.of(
+                "obligationReference", saved.getObligationReference(),
+                "fileName", stored.originalFileName(),
+                "fileHash", stored.sha256Hash(),
+                "fileSize", stored.sizeBytes(),
+                "actorName", actorDisplay
+        ));
+
+        log.info("Compliance evidence file uploaded for obligation={} by actor={}", saved.getObligationReference(), actorDisplay);
+        return ComplianceResponse.from(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.core.io.Resource loadEvidenceResource(String idOrReference) {
+        ComplianceObligation obl = findObligation(idOrReference);
+        securityUtils.assertInstitutionAccess(obl.getInstitution());
+        if (obl.getInstitution() != null) {
+            securityUtils.assertRegionAccess(obl.getInstitution().getRegion());
+        }
+
+        if (obl.getStoragePath() == null || obl.getStoragePath().isBlank()) {
+            throw new ResourceNotFoundException("No evidence file has been uploaded for obligation: " + idOrReference);
+        }
+
+        return fileStorageService.loadAsResource(obl.getStoragePath());
     }
 
     @Transactional

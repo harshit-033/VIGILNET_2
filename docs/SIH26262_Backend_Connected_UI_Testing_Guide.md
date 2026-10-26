@@ -1,16 +1,18 @@
 # SIH 26262 — Testing Guide for Backend-Connected UI Features
-## AICTE Approval & Compliance Orchestration Platform
-**Target Problem Statement:** 26262  
-**Target Environment:** Spring Boot 3.4.3 + PostgreSQL 18.6 + React 19 Frontend  
-**Audience:** Technical Evaluators, Manual Testers, and Student Demonstrators  
-**Document Version:** 1.0.0 (Production-Verified)  
+## SAGE — System for Approval Governance and Evaluation
+**Supporting Descriptor:** AICTE Approval and Compliance Platform | SIH Problem Statement 26262  
+**Target Environment:** Spring Boot 3.4.3 + PostgreSQL 18.x + React 19 Frontend  
+**Audience:** Technical Evaluators, Manual Testers, and Evaluator Demonstrators  
+**Document Version:** 2.0.0 (Hardened Milestone)  
 **Date:** October 2026  
 
 ---
 
 ## Executive Summary & Scope
 
-This testing guide provides step-by-step procedures for manually testing and verifying **only the UI features that communicate with the Spring Boot backend and persist or retrieve data through PostgreSQL**.
+This testing guide provides step-by-step procedures for manually testing and verifying **the UI and API features that communicate with the SAGE Spring Boot backend and persist or retrieve data through PostgreSQL**.
+
+> **Regulatory Notice**: SAGE is an academic hackathon prototype engineered for SIH Problem Statement 26262. It is not an officially operated or endorsed portal of the All India Council for Technical Education (AICTE).
 
 ### 1. Scope Matrix
 
@@ -26,11 +28,11 @@ This testing guide provides step-by-step procedures for manually testing and ver
 | **End-to-End Scrutiny Journey** | Full Journey Flow | Full Audit & Transition Persistence | **IN SCOPE** (Section 11, TC-08) |
 | **Create Application Workflow** | `POST /api/v1/applications` | `applications`, `audit_events` | **IN SCOPE** (Section 11b, TC-09) |
 | **Institution Management CRUD** | `POST /api/v1/institutions` (Backend API Only) | None in UI (API exists, no UI screen connected) | **EXCLUDED** (Section 12.2) |
-| **EVC Scheduling Module** | `/api/v1/evc` | PostgreSQL `evc_visits` | **IN SCOPE** — verify schedule, completion and report persistence |
-| **Compliance Obligations Module** | `/api/v1/compliance` | PostgreSQL `compliance_obligations` | **IN SCOPE** — verify status transitions; evidence is currently reference/metadata-based |
+| **EVC Scheduling & Checklist** | `/api/v1/evc` | PostgreSQL `evc_visits`, `evc_inspection_checklists` | **IN SCOPE** — verify schedule, checklist items, and completion |
+| **Compliance Obligations Module** | `/api/v1/compliance`<br>`/api/v1/compliance/{id}/evidence` | PostgreSQL `compliance_obligations` (Flyway V7) | **IN SCOPE** — verify status transitions and real binary file upload/download |
 | **Document Registry & Versions** | `/api/v1/documents` | PostgreSQL registry + configured local disk | **IN SCOPE** — verify upload, download and version history |
-| **System Alerts & Notifications** | `/api/v1/alerts` | PostgreSQL `platform_alerts` | **PARTIAL** — acknowledgement/escalation persist; retry remains local UI simulation |
-| **Reports & BI Analytics** | Frontend calculations | In-memory calculations over loaded records | **PARTIAL** — compare KPIs with authorized source records; no dedicated reporting API established |
+| **System Alerts & Notifications** | `/api/v1/alerts`<br>`/api/v1/alerts/{id}/retry` | PostgreSQL `platform_alerts`, `alert_delivery_attempts` (Flyway V7) | **IN SCOPE** — delivery retry engine, attempt audit history, escalation |
+| **Reports & BI Analytics** | Frontend calculations | In-memory calculations over loaded records | **PARTIAL** — compare KPIs with authorized source records |
 
 ---
 

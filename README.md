@@ -1,14 +1,14 @@
-# AICTE Approval & Compliance Orchestration Platform
+# SAGE — System for Approval Governance and Evaluation
 
-**Problem Statement ID**: 26262  
-**Implementation Stage**: End-to-End Scrutiny & Deficiency-Rectification Journey Connected (Spring Boot 3.4.3 + PostgreSQL 18 + React 19 Frontend)  
+**Supporting Descriptor**: AICTE Approval & Compliance Platform | SIH Problem Statement 26262  
+**Implementation Stage**: Hardened End-to-End Scrutiny, EVC, Document Integrity, Compliance Evidence & Alert Retry (Spring Boot 3.4.3 + PostgreSQL 18.x + React 19 Frontend)  
 **Reference Design**: Backend Implementation Guide, Solution Blueprint & Integration Assessment  
 
 ---
 
 ## 1. Project Overview
 
-The **AICTE Approval & Compliance Orchestration Platform** is an enterprise-grade system designed to orchestrate technical institution approval lifecycles, deficiency rectifications, regulatory compliance monitoring, and Expert Visit Committee (EVC) operations.
+**SAGE** (**System for Approval Governance and Evaluation**) is an enterprise-grade platform designed to orchestrate technical institution approval lifecycles, deficiency rectifications, regulatory compliance monitoring, and Expert Visit Committee (EVC) operations.
 
 The platform enforces the architectural mandate that **the backend owns business logic, state machines, and regulatory validation**:
 - The React frontend is a replaceable client. Business rules, validation constraints, concurrency controls, and state transitions are enforced exclusively in server-side Spring Boot services.
@@ -16,8 +16,8 @@ The platform enforces the architectural mandate that **the backend owns business
 - Every workflow action atomically records an immutable audit event and a workflow transition entry in the same transaction.
 - Client requests are authenticated via a development Bearer token bridge derived from trusted server-side roles, never trusting client-supplied roles.
 
-> **Important Regulatory Notice**:  
-> Workflow stages, application types, and status codes currently configured are illustrative prototype values aligned with the demo journey. Authoritative AICTE Approval Process Handbook (APH) rules must be formally validated with system owners prior to production deployment.
+> **Important Regulatory & Non-Endorsement Notice**:  
+> SAGE is an academic hackathon prototype engineered for Smart India Hackathon (SIH) Problem Statement 26262. It is **not** an officially operated, sanctioned, or endorsed portal of the All India Council for Technical Education (AICTE). Workflow stages, application types, status codes, and heuristic advisory risk evaluations configured are illustrative prototype values aligned with the demonstration journey. Authoritative AICTE Approval Process Handbook (APH) rules must be formally validated with system owners prior to production deployment.
 
 ---
 
@@ -28,15 +28,15 @@ All versions are verified directly from repository configuration descriptors (`p
 | Component | Technology | Version | Purpose |
 | :--- | :--- | :--- | :--- |
 | **Language** | Java (OpenJDK) | `21` LTS | Backend runtime and compiler |
-| **Framework** | Spring Boot | `3.4.3` | Application framework (Web, Data JPA, Security) |
+| **Framework** | Spring Boot | `3.4.3` | Application framework (Web, Data JPA, Security, Actuator) |
 | **Build Tool** | Apache Maven | `3.10.0` | Build automation via Maven Wrapper (`./mvnw`) |
-| **Database** | PostgreSQL | `18.6` | Relational database (Docker container `aicte-postgres`) |
-| **Migrations** | Flyway | `10.20.1` | Automated database schema version control (V1 + V2) |
+| **Database** | PostgreSQL | `18.6` / `16.x` | Relational database (Docker container or local cluster) |
+| **Migrations** | Flyway | `10.20.1` | Automated database schema version control (V1 through V7) |
 | **ORM / JPA** | Hibernate | `6.6.8.Final` | Persistence provider with entity graphs (`ddl-auto: validate`) |
 | **Connection Pool** | HikariCP | `5.1.0` | High-performance JDBC connection pooling |
 | **Security** | Spring Security | `6.4.3` | Endpoint perimeter, CORS, and Bearer token authentication |
 | **API Docs** | springdoc-openapi | `2.8.5` | OpenAPI 3.0 specification and Swagger UI |
-| **Frontend** | React + Vite | React `19.3.1`, Vite `8.3.5` | Modern responsive web frontend interface (located in `frontend/`) |
+| **Frontend** | React + Vite | React `19.3.1`, Vite `8.3.5` | Modern responsive web frontend (`sage-governance-frontend`) |
 
 ---
 
@@ -158,9 +158,9 @@ Returns the updated canonical `ApplicationResponse` including updated stage, own
 
 ---
 
-## 7. PostgreSQL Persistence vs. LocalStorage Status
+## 7. PostgreSQL Persistence Status
 
-To deliver the deadline goal without destabilizing the frontend, modules are segmented as follows:
+All primary regulatory journeys are connected and persisted in PostgreSQL:
 
 | Module / Feature | Persistence Storage | Status |
 | :--- | :--- | :--- |
@@ -171,124 +171,94 @@ To deliver the deadline goal without destabilizing the frontend, modules are seg
 | **Submit Corrections** | PostgreSQL 18 (`applications`, `workflow_transitions`, `audit_events`) | **Connected to Backend** |
 | **Complete Scrutiny** | PostgreSQL 18 (`applications`, `workflow_transitions`, `audit_events`) | **Connected to Backend** |
 | **Audit Log Trail** | PostgreSQL 18 (`audit_events` table) | **Connected to Backend** |
-| **Expert Visit Committee (EVC)** | Browser `localStorage` | Preserved for future phase |
-| **Compliance Obligations** | Browser `localStorage` | Preserved for future phase |
-| **Statutory Documents** | Browser `localStorage` | Preserved for future phase |
-| **Alerts & Notifications** | Browser `localStorage` | Preserved for future phase |
+| **Expert Visit Committee (EVC)** | PostgreSQL 18 (`evc_visits`, `evc_inspection_checklists`) | **Connected to Backend (Flyway V5)** |
+| **Scrutiny Checklist Review** | PostgreSQL 18 (`scrutiny_checklist_reviews`) | **Connected to Backend (Flyway V6)** |
+| **Compliance Obligations & Evidence** | PostgreSQL 18 (`compliance_obligations` with file storage metadata) | **Connected to Backend (Flyway V7)** |
+| **Document Registry & Hash Verification** | PostgreSQL 18 (`documents`, `document_audit_logs`) + SHA-256 storage | **Connected to Backend (Flyway V4)** |
+| **Alerts & Notification Retries** | PostgreSQL 18 (`platform_alerts`, `alert_delivery_attempts`) | **Connected to Backend (Flyway V7)** |
 
 ---
 
 ## 8. How to Run & Verify
 
+For comprehensive setup, troubleshooting, and API testing guides, consult **[LOCAL_RUN_AND_TEST_GUIDE.md](file:///home/Harshit/Desktop/PROJECTS/SIH%202026/AICTE/SIH2%20%28Copy%29/docs/LOCAL_RUN_AND_TEST_GUIDE.md)** and **[PROJECT_CHECKPOINT.md](file:///home/Harshit/Desktop/PROJECTS/SIH%202026/AICTE/SIH2%20%28Copy%29/docs/PROJECT_CHECKPOINT.md)**.
+
 ### Option A: One-Command Startup (Recommended)
-From the project root (`SIH2/`), simply execute:
+From the project root:
 ```bash
 ./run.sh
 ```
-This automated master script will:
-1. Verify / start PostgreSQL database on port 5432 (via docker compose or system service).
-2. Start the Spring Boot backend on port 8080 and await healthy status (`/api/v1/health`).
-3. Start the Vite React frontend on port 5173.
-4. Stream unified logs and gracefully shut down all services upon pressing `Ctrl+C`.
+This automated runner script will:
+1. Dynamically locate an installed Java 21 JDK across `$JAVA_HOME`, `$PATH`, user directories, and standard Linux JVM paths.
+2. Verify PostgreSQL connectivity on port `5432`.
+3. Safely verify that ports `8080` and `5173` are unallocated (reporting PID conflicts without destructive killing).
+4. Start the Spring Boot backend on port `8080` and await the SAGE health check (`/actuator/health`).
+5. Launch the Vite React frontend on `http://localhost:5173`.
+6. Gracefully terminate all child processes upon pressing `Ctrl+C`.
 
 ---
 
-### Option B: Manual Startup (3 Separate Terminals)
+### Option B: Manual Startup (2 Separate Terminals)
 
-#### Terminal 1: Start PostgreSQL Database
-From the project root (`SIH2/`):
+#### Terminal 1: Start Spring Boot Backend
+Ensure PostgreSQL is active on port 5432, then:
 ```bash
-# Using Docker Compose (Recommended)
-docker compose up -d
-
-# Verify database connection readiness
-pg_isready -h localhost -p 5432
-```
-*Note: If running a native PostgreSQL service, ensure a database named `aicte_platform_db` exists on port 5432 with user `aicte_app_user` (or customize via `.env`). Flyway automatically runs database migrations on backend startup.*
-
-#### Terminal 2: Start Spring Boot Backend
-From the project root (`SIH2/`):
-```bash
+export LD_LIBRARY_PATH="$HOME/.local/lib:${LD_LIBRARY_PATH}"
 ./mvnw spring-boot:run
 ```
 Verify health endpoint once started:
 ```bash
-curl http://localhost:8080/api/v1/health
-# Response: {"status":"UP","application":"aicte-compliance-platform",...}
+curl http://localhost:8080/actuator/health
 ```
 *Backend API and OpenAPI/Swagger Docs:*
 - Base API URL: `http://localhost:8080/api/v1`
 - Swagger UI: `http://localhost:8080/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
-#### Terminal 3: Start React 19 Frontend
-From the project root (`SIH2/`), navigate to the frontend directory:
+#### Terminal 2: Start React Frontend
 ```bash
 cd frontend
-npm ci          # Or: npm install
+npm install
 npm run dev
 ```
 Open **`http://localhost:5173`** in your browser.
 
 ---
 
-## 8.1 Setup Instructions for Evaluators / Teammates Unpacking Archive
-
-If you received `SIH26262_Complete_Project.zip`:
-
-1. **Extract the ZIP file**:
-   ```bash
-   unzip SIH26262_Complete_Project.zip
-   cd SIH2
-   ```
-2. **Environment Configuration**:
-   - The default configuration in `compose.yaml` and `src/main/resources/application.yml` runs out-of-the-box with default development values (`aicte_platform_db`, `aicte_app_user`, `aicte_123`).
-   - If you need custom ports or credentials, copy the template:
-     ```bash
-     cp .env.example .env
-     ```
-3. **Start Services in 3 Terminals**:
-   - Terminal 1: `docker compose up -d`
-   - Terminal 2: `./mvnw spring-boot:run`
-   - Terminal 3: `cd frontend && npm ci && npm run dev`
-4. **Access the Application**:
-   - Open browser at `http://localhost:5173`
-   - Switch roles using the top-right header role dropdown to explore all 7 AICTE stakeholder journeys.
-
----
-
 ## 9. Automated Testing & Verification
 
-### Backend Automated Tests (20 Tests, 100% Passing)
-Run all backend unit, regression, security, and persistence tests:
+### Backend Automated Tests (55 Tests, 100% Passing)
+Run all backend integration, persistence, workflow, document integrity, compliance evidence, and alert retry tests:
 ```bash
-./mvnw test
+./mvnw --batch-mode test
 ```
 
-### Frontend Automated Tests & Build Verification
+### Frontend Automated Tests & Code Quality (12 Tests, 100% Passing)
 From the `frontend/` directory:
 ```bash
 cd frontend
 
-# Run frontend EVC lifecycle & tab filtering tests
+# Run frontend EVC and SAGE branding/workflow tests
 npm test
 
 # Verify production Vite build bundle
 npm run build
+
+# Run lint verification
+npm run lint
 ```
 
-### Test Suite Summary (20 Tests, 100% Passing)
-- **`HealthEndpointTest`** (2 tests): Public health endpoint access and security boundary verification.
-- **`PostgresPersistenceIntegrationTest`** (2 tests): Flyway schema validation and JPA entity relationships.
-- **`InstitutionAndApplicationApiIntegrationTest`** (9 tests): CRUD endpoints, duplicate rejection, pagination, and query filtering.
-- **`WorkflowAndSecurityIntegrationTest`** (7 tests):
-  1. Development authentication token issuance and Bearer access verification.
-  2. Malformed JSON request body rejection (400 Bad Request Problem Detail).
-  3. Query parameter type mismatch rejection (400 Bad Request Problem Detail).
-  4. Unsupported HTTP method handling (405 Method Not Allowed Problem Detail).
-  5. Unsupported media type handling (415 Unsupported Media Type Problem Detail).
-  6. Jackson audit log serialization verifying safe JSON escaping with quotes and backslashes.
-  7. Full 3-step workflow state transitions (`RETURN_FOR_CORRECTION` -> `SUBMIT_CORRECTIONS` -> `COMPLETE_SCRUTINY`) verifying database integrity and optimistic locking.
+### Test Suite Summary (55 Backend + 12 Frontend Tests)
+- **`HealthEndpointTest`**: Public health endpoint access and SAGE branding verification.
+- **`PostgresPersistenceIntegrationTest`**: Flyway schema validation (V1 through V7) and JPA entity relationships.
+- **`InstitutionAndApplicationApiIntegrationTest`**: CRUD endpoints, duplicate rejection, pagination, and query filtering.
+- **`WorkflowAndSecurityIntegrationTest`**: Development authentication, RFC 7807 problem details, Jackson audit escaping, and 3-step state machine.
+- **`ScrutinyVerificationIntegrationTest`**: Scrutiny checklist verification, deficiency flagging, and signoffs.
+- **`EvcInspectionIntegrationTest`**: Complete EVC inspection lifecycle, scheduling, checklist scoring, and completion.
+- **`DocumentTamperingIntegrationTest`**: SHA-256 hash validation and tampering detection.
+- **`IncrementalValidationIntegrationTest`**: Heuristic rulesets and advisory score labeling.
+- **`SageComplianceEvidenceAndAlertRetryIntegrationTest`**: Real binary compliance evidence upload/download parity, file type whitelisting, tenant isolation, and alert delivery retry state machine with attempt recording.
+- **Frontend Test Suites**: 12 component and workflow tests (`evcWorkflow.test.js`, `sageBrandingAndWorkflow.test.js`) verifying EVC modals, SAGE navigation, role switcher, and tenant guards.
 
 ---
 

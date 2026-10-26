@@ -1,8 +1,8 @@
-name: VIGILNET CI
+name: SAGE CI
 
 on:
   push:
-    branches: [main, "fix/**"]
+    branches: [main, "feat/**", "fix/**"]
   pull_request:
     branches: [main]
 

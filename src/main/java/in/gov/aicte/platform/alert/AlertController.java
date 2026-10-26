@@ -51,6 +51,36 @@ public class AlertController {
         return ResponseEntity.ok(alertService.getAlertByIdOrReference(id));
     }
 
+    @PostMapping
+    @PreAuthorize("hasAnyRole('REGIONAL_OFFICER', 'SCRUTINY_OFFICER', 'COMPLIANCE_REVIEWER', 'EVC_COORDINATOR', 'SENIOR_MANAGEMENT', 'ADMINISTRATOR')")
+    @Operation(summary = "Create regulatory alert", description = "Register a new regulatory task, deadline alert, or SLA reminder")
+    public ResponseEntity<AlertResponse> createAlert(
+            @Valid @RequestBody in.gov.aicte.platform.alert.dto.CreateAlertRequest request,
+            Principal principal
+    ) {
+        String actorId = (principal != null) ? principal.getName() : "SYSTEM";
+        AlertResponse response = alertService.createAlert(request, actorId);
+        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/retry")
+    @PreAuthorize("hasAnyRole('REGIONAL_OFFICER', 'ADMINISTRATOR', 'COMPLIANCE_REVIEWER')")
+    @Operation(summary = "Retry alert delivery", description = "Trigger retry dispatch on a failed or pending alert")
+    public ResponseEntity<AlertResponse> retryAlert(
+            @PathVariable String id,
+            Principal principal
+    ) {
+        String actorId = (principal != null) ? principal.getName() : "SYSTEM";
+        return ResponseEntity.ok(alertService.retryAlert(id, actorId));
+    }
+
+    @GetMapping("/{id}/attempts")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Get alert delivery history", description = "Retrieve list of all delivery and retry attempts for this alert")
+    public ResponseEntity<List<in.gov.aicte.platform.alert.dto.AlertDeliveryAttemptResponse>> getDeliveryHistory(@PathVariable String id) {
+        return ResponseEntity.ok(alertService.getDeliveryHistory(id));
+    }
+
     @PostMapping("/{id}/acknowledge")
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Acknowledge alert", description = "Mark alert as read and acknowledged by authorized recipient")

@@ -50,6 +50,15 @@ public class PlatformAlert {
     @Column(name = "delivery_status", length = 32)
     private String deliveryStatus = "Delivered";
 
+    @Column(name = "delivery_attempts", nullable = false)
+    private Integer deliveryAttempts = 1;
+
+    @Column(name = "last_delivery_attempt_at")
+    private Instant lastDeliveryAttemptAt = Instant.now();
+
+    @Column(name = "last_delivery_error", columnDefinition = "TEXT")
+    private String lastDeliveryError;
+
     @Column(name = "acknowledged", nullable = false)
     private Boolean acknowledged = false;
 
@@ -128,6 +137,12 @@ public class PlatformAlert {
     public void setChannel(String channel) { this.channel = channel; }
     public String getDeliveryStatus() { return deliveryStatus; }
     public void setDeliveryStatus(String deliveryStatus) { this.deliveryStatus = deliveryStatus; }
+    public Integer getDeliveryAttempts() { return deliveryAttempts; }
+    public void setDeliveryAttempts(Integer deliveryAttempts) { this.deliveryAttempts = deliveryAttempts; }
+    public Instant getLastDeliveryAttemptAt() { return lastDeliveryAttemptAt; }
+    public void setLastDeliveryAttemptAt(Instant lastDeliveryAttemptAt) { this.lastDeliveryAttemptAt = lastDeliveryAttemptAt; }
+    public String getLastDeliveryError() { return lastDeliveryError; }
+    public void setLastDeliveryError(String lastDeliveryError) { this.lastDeliveryError = lastDeliveryError; }
     public Boolean getAcknowledged() { return acknowledged; }
     public void setAcknowledged(Boolean acknowledged) { this.acknowledged = acknowledged; }
     public String getAcknowledgedBy() { return acknowledgedBy; }

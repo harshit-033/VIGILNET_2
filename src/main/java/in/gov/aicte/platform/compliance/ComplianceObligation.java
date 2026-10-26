@@ -44,6 +44,15 @@ public class ComplianceObligation {
     @Column(name = "evidence_hash", length = 64)
     private String evidenceHash;
 
+    @Column(name = "storage_path", length = 512)
+    private String storagePath;
+
+    @Column(name = "mime_type", length = 128)
+    private String mimeType;
+
+    @Column(name = "file_size_bytes")
+    private Long fileSizeBytes;
+
     @Column(name = "evidence_notes", columnDefinition = "TEXT")
     private String evidenceNotes;
 
@@ -125,6 +134,12 @@ public class ComplianceObligation {
     public void setEvidenceFile(String evidenceFile) { this.evidenceFile = evidenceFile; }
     public String getEvidenceHash() { return evidenceHash; }
     public void setEvidenceHash(String evidenceHash) { this.evidenceHash = evidenceHash; }
+    public String getStoragePath() { return storagePath; }
+    public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
+    public String getMimeType() { return mimeType; }
+    public void setMimeType(String mimeType) { this.mimeType = mimeType; }
+    public Long getFileSizeBytes() { return fileSizeBytes; }
+    public void setFileSizeBytes(Long fileSizeBytes) { this.fileSizeBytes = fileSizeBytes; }
     public String getEvidenceNotes() { return evidenceNotes; }
     public void setEvidenceNotes(String evidenceNotes) { this.evidenceNotes = evidenceNotes; }
     public LocalDate getSubmittedDate() { return submittedDate; }

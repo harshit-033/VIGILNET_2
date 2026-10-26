@@ -1,14 +1,14 @@
 {
-  "name": "sih26262_front",
+  "name": "sage-governance-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "node tests/evcLifecycle.test.js"
+    "test": "node tests/evcLifecycle.test.js && node tests/sageBrandingAndWorkflow.test.js"
   },
   "dependencies": {
     "lucide-react": "^1.61.0",

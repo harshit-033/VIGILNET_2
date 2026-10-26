@@ -11,10 +11,10 @@
 	</parent>
 
 	<groupId>in.gov.aicte</groupId>
-	<artifactId>aicte-compliance-platform</artifactId>
+	<artifactId>sage-compliance-platform</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>aicte-compliance-platform</name>
-	<description>AICTE Approval and Compliance Orchestration Platform (PS 26262)</description>
+	<name>sage-compliance-platform</name>
+	<description>SAGE — System for Approval Governance and Evaluation (SIH 26262)</description>
 
 	<properties>
 		<java.version>21</java.version>

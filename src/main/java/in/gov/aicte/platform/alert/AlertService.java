@@ -31,17 +31,23 @@ public class AlertService {
     private final AuditEventRepository auditEventRepository;
     private final SecurityUtils securityUtils;
     private final ObjectMapper objectMapper;
+    private final AlertDeliveryService alertDeliveryService;
+    private final in.gov.aicte.platform.institution.InstitutionRepository institutionRepository;
 
     public AlertService(
             PlatformAlertRepository alertRepository,
             AuditEventRepository auditEventRepository,
             SecurityUtils securityUtils,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            AlertDeliveryService alertDeliveryService,
+            in.gov.aicte.platform.institution.InstitutionRepository institutionRepository
     ) {
         this.alertRepository = alertRepository;
         this.auditEventRepository = auditEventRepository;
         this.securityUtils = securityUtils;
         this.objectMapper = objectMapper;
+        this.alertDeliveryService = alertDeliveryService;
+        this.institutionRepository = institutionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -183,6 +189,80 @@ public class AlertService {
 
         log.info("Alert escalated ref={} to={} by actor={}", saved.getAlertReference(), saved.getEscalatedTo(), actorDisplay);
         return AlertResponse.from(saved);
+    }
+
+    @Transactional
+    public AlertResponse createAlert(in.gov.aicte.platform.alert.dto.CreateAlertRequest request, String actorId) {
+        in.gov.aicte.platform.institution.Institution institution = null;
+        if (request.institutionId() != null) {
+            institution = institutionRepository.findById(request.institutionId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Institution not found with id: " + request.institutionId()));
+            securityUtils.assertInstitutionAccess(institution);
+            securityUtils.assertRegionAccess(institution.getRegion());
+        }
+
+        String ref = "ALT-" + System.currentTimeMillis();
+        String effectiveActor = (actorId != null && !actorId.isBlank()) ? actorId : "SYSTEM";
+
+        PlatformAlert alert = new PlatformAlert(
+                ref,
+                institution,
+                request.type().trim(),
+                request.category().trim(),
+                request.severity() != null ? request.severity().trim() : "HIGH",
+                request.urgency() != null ? request.urgency().trim() : "Due soon",
+                request.message().trim(),
+                request.requiredAction() != null ? request.requiredAction().trim() : null,
+                request.relatedRecordId() != null ? request.relatedRecordId().trim() : null,
+                request.recipient() != null ? request.recipient().trim() : null,
+                request.dueDate()
+        );
+        if (request.channel() != null && !request.channel().isBlank()) {
+            alert.setChannel(request.channel().trim());
+        }
+        alert.setDeliveryAttempts(0);
+
+        PlatformAlert saved = alertRepository.save(alert);
+
+        // Perform initial delivery attempt via AlertDeliveryService
+        saved = alertDeliveryService.sendOrRetry(saved, effectiveActor);
+
+        saveAuditEvent("ALERT_CREATED", effectiveActor, "ALERT", saved.getAlertReference(), Map.of(
+                "alertReference", saved.getAlertReference(),
+                "type", saved.getType(),
+                "category", saved.getCategory(),
+                "deliveryStatus", saved.getDeliveryStatus()
+        ));
+
+        log.info("Alert created ref={} by actor={}", saved.getAlertReference(), effectiveActor);
+        return AlertResponse.from(saved);
+    }
+
+    @Transactional
+    public AlertResponse retryAlert(String idOrReference, String actorId) {
+        PlatformAlert alert = findAlert(idOrReference);
+        securityUtils.assertInstitutionAccess(alert.getInstitution());
+        if (alert.getInstitution() != null) {
+            securityUtils.assertRegionAccess(alert.getInstitution().getRegion());
+        }
+
+        String effectiveActor = (actorId != null && !actorId.isBlank()) ? actorId : "SYSTEM";
+        PlatformAlert updated = alertDeliveryService.sendOrRetry(alert, effectiveActor);
+        log.info("Alert retry dispatched for ref={} new status={}", updated.getAlertReference(), updated.getDeliveryStatus());
+        return AlertResponse.from(updated);
+    }
+
+    @Transactional(readOnly = true)
+    public List<in.gov.aicte.platform.alert.dto.AlertDeliveryAttemptResponse> getDeliveryHistory(String idOrReference) {
+        PlatformAlert alert = findAlert(idOrReference);
+        securityUtils.assertInstitutionAccess(alert.getInstitution());
+        if (alert.getInstitution() != null) {
+            securityUtils.assertRegionAccess(alert.getInstitution().getRegion());
+        }
+
+        return alertDeliveryService.getDeliveryHistory(alert.getId()).stream()
+                .map(in.gov.aicte.platform.alert.dto.AlertDeliveryAttemptResponse::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)

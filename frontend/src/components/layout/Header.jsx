@@ -51,7 +51,7 @@ export const Header = () => {
       {/* Left: Breadcrumbs & Page Title */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-text-muted)', fontWeight: '600' }}>
-          AICTE Platform
+          SAGE Platform
         </span>
         <ChevronRight size={14} color="var(--color-text-light)" />
         <span style={{ fontSize: 'var(--font-size-md)', fontWeight: '700', color: 'var(--color-navy)' }}>

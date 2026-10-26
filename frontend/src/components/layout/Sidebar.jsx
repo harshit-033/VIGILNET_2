@@ -49,15 +49,16 @@ export const Sidebar = () => {
             fontWeight: '900',
             flexShrink: 0,
           }}
+          aria-label="SAGE Platform"
         >
-          A
+          S
         </div>
         <div>
-          <div style={{ fontSize: '13px', fontWeight: '800', lineHeight: 1.25, color: '#FFFFFF', letterSpacing: '0.01em' }}>
-            AICTE Approval &amp; Compliance
+          <div style={{ fontSize: '15px', fontWeight: '800', lineHeight: 1.25, color: '#FFFFFF', letterSpacing: '0.02em' }}>
+            SAGE
           </div>
-          <div style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.08em', color: '#9BB4CD', marginTop: '3px' }}>
-            ORCHESTRATION PLATFORM
+          <div style={{ fontSize: '9px', fontWeight: '700', letterSpacing: '0.02em', color: '#9BB4CD', marginTop: '2px' }}>
+            Approval Governance &amp; Evaluation
           </div>
         </div>
       </div>
