@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ public class DocumentService {
     private final InstitutionRepository institutionRepository;
     private final ApplicationRepository applicationRepository;
     private final FileStorageService fileStorageService;
+    private final OcrService ocrService;
     private final AuditEventRepository auditEventRepository;
     private final SecurityUtils securityUtils;
     private final ObjectMapper objectMapper;
@@ -47,6 +49,7 @@ public class DocumentService {
             InstitutionRepository institutionRepository,
             ApplicationRepository applicationRepository,
             FileStorageService fileStorageService,
+            OcrService ocrService,
             AuditEventRepository auditEventRepository,
             SecurityUtils securityUtils,
             ObjectMapper objectMapper
@@ -56,6 +59,7 @@ public class DocumentService {
         this.institutionRepository = institutionRepository;
         this.applicationRepository = applicationRepository;
         this.fileStorageService = fileStorageService;
+        this.ocrService = ocrService;
         this.auditEventRepository = auditEventRepository;
         this.securityUtils = securityUtils;
         this.objectMapper = objectMapper;
@@ -154,7 +158,7 @@ public class DocumentService {
             MultipartFile file,
             String documentType,
             String category,
-            Long institutionId,
+            String institutionId,
             Long applicationId,
             LocalDate issueDate,
             LocalDate expiryDate,
@@ -162,9 +166,16 @@ public class DocumentService {
             String actorId
     ) throws IOException {
         Institution institution;
-        if (institutionId != null) {
-            institution = institutionRepository.findById(institutionId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Institution not found with id: " + institutionId));
+        if (institutionId != null && !institutionId.isBlank()) {
+            String requestedInstitution = institutionId.trim();
+            if (requestedInstitution.matches("\\d+")) {
+                Long numericId = Long.parseLong(requestedInstitution);
+                institution = institutionRepository.findById(numericId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Institution not found with id: " + requestedInstitution));
+            } else {
+                institution = institutionRepository.findByInstitutionalIdentifier(requestedInstitution)
+                        .orElseThrow(() -> new ResourceNotFoundException("Institution not found with identifier: " + requestedInstitution));
+            }
         } else {
             // Default to first institution or user's assigned institution
             String assignedInstId = securityUtils.getCurrentUser().map(DevUserDto::institutionId).orElse(null);
@@ -185,6 +196,7 @@ public class DocumentService {
         }
 
         FileStorageService.StoredFile stored = fileStorageService.store(file);
+        OcrService.ExtractionResult extraction = ocrService.extract(Paths.get(stored.storagePath()), stored.originalFileName());
 
         String ref = "DOC-" + System.currentTimeMillis();
         String effectiveActor = (actorId != null && !actorId.isBlank()) ? actorId : "SYSTEM";
@@ -208,6 +220,9 @@ public class DocumentService {
                 notes,
                 effectiveActor
         );
+        doc.setExtractedText(extraction.text());
+        doc.setOcrStatus(extraction.status());
+        doc.setOcrMessage(extraction.message());
         DocumentRecord saved = documentRepository.save(doc);
 
         // Record initial version 1
@@ -222,6 +237,9 @@ public class DocumentService {
                 "Verification pending",
                 effectiveActor
         );
+        v1.setExtractedText(extraction.text());
+        v1.setOcrStatus(extraction.status());
+        v1.setOcrMessage(extraction.message());
         versionRepository.save(v1);
 
         saveAuditEvent("DOCUMENT_UPLOADED", effectiveActor, "DOCUMENT", saved.getDocumentReference(), Map.of(
@@ -248,6 +266,7 @@ public class DocumentService {
         securityUtils.assertInstitutionAccess(doc.getInstitution());
 
         FileStorageService.StoredFile stored = fileStorageService.store(file);
+        OcrService.ExtractionResult extraction = ocrService.extract(Paths.get(stored.storagePath()), stored.originalFileName());
 
         int nextVersion = doc.getVersionNumber() + 1;
         String effectiveActor = (actorId != null && !actorId.isBlank()) ? actorId : "SYSTEM";
@@ -258,6 +277,9 @@ public class DocumentService {
         doc.setFileSizeBytes(stored.sizeBytes());
         doc.setMimeType(stored.mimeType());
         doc.setSha256Hash(stored.sha256Hash());
+        doc.setExtractedText(extraction.text());
+        doc.setOcrStatus(extraction.status());
+        doc.setOcrMessage(extraction.message());
         if (issueDate != null) doc.setIssueDate(issueDate);
         if (expiryDate != null) doc.setExpiryDate(expiryDate);
         doc.setVerificationStatus("Renewal submitted");
@@ -278,6 +300,9 @@ public class DocumentService {
                 "Renewal submitted",
                 effectiveActor
         );
+        version.setExtractedText(extraction.text());
+        version.setOcrStatus(extraction.status());
+        version.setOcrMessage(extraction.message());
         versionRepository.save(version);
 
         saveAuditEvent("DOCUMENT_RENEWAL_SUBMITTED", effectiveActor, "DOCUMENT", saved.getDocumentReference(), Map.of(
