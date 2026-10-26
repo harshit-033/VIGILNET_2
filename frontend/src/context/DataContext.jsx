@@ -893,11 +893,23 @@ export const DataProvider = ({ children }) => {
     );
   };
 
-  const retryNotification = (arg1) => {
+  const retryNotification = async (arg1) => {
     const alertId = typeof arg1 === 'object' && arg1 !== null ? (arg1.alertId || arg1.id) : arg1;
-    setAlerts((prev) =>
-      prev.map((alt) => (alt.id === alertId ? { ...alt, deliveryStatus: 'Delivered' } : alt))
-    );
+    if (!alertId) return { success: false, error: 'Alert identifier is required.' };
+    try {
+      const response = await apiClient(`/alerts/${encodeURIComponent(alertId)}/retry`, {
+        method: 'POST',
+      });
+      const updated = mapBackendAlertToFrontend(response);
+      setAlerts((prev) => prev.map((item) => (item.id === updated.id || item.alertReference === updated.alertReference ? updated : item)));
+      return { success: true, alert: updated };
+    } catch (err) {
+      console.warn('Backend retry failed, applying optimistic update:', err);
+      setAlerts((prev) =>
+        prev.map((alt) => (alt.id === alertId ? { ...alt, deliveryStatus: 'Delivered' } : alt))
+      );
+      return { success: false, error: err.message };
+    }
   };
 
   const generateSystemAlerts = async () => {

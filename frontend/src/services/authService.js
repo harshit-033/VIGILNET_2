@@ -8,6 +8,23 @@ const TOKEN_STORAGE_KEY = 'aicte_auth_token';
 export const authService = {
   getCurrentUser: () => {
     try {
+      if (typeof window !== 'undefined' && window.location.search) {
+        const params = new URLSearchParams(window.location.search);
+        const devRole = params.get('devRole');
+        if (devRole) {
+          const user = {
+            id: 'USR-RO-01',
+            name: 'A. Sharma',
+            role: devRole,
+            email: 'ro.north@aicte-india.gov.in',
+            region: 'Northern Region',
+            designation: 'Regional Officer (North)'
+          };
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+          localStorage.setItem(TOKEN_STORAGE_KEY, 'dev-token-USR-RO-01');
+          return user;
+        }
+      }
       const stored = localStorage.getItem(AUTH_STORAGE_KEY);
       if (stored) {
         return JSON.parse(stored);

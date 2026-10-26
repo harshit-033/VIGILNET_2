@@ -436,8 +436,22 @@ export const DocumentsPage = () => {
                       </td>
                       <td>
                         <strong>{row.documentType || row.category}</strong>
-                        <div style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
-                          File: {row.fileName}
+                        <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+                          <span>File: {row.fileName}</span>
+                          {row.ocrStatus && (
+                            <span
+                              className={`badge ${
+                                row.ocrStatus === 'OCR_COMPLETED' || row.ocrStatus === 'TEXT_EXTRACTED'
+                                  ? 'badge-green'
+                                  : row.ocrStatus === 'OCR_FAILED'
+                                  ? 'badge-red'
+                                  : 'badge-gray'
+                              }`}
+                              style={{ fontSize: '9px', padding: '1px 5px' }}
+                            >
+                              {row.ocrStatus}
+                            </span>
+                          )}
                         </div>
                       </td>
                       <td>
@@ -834,7 +848,17 @@ export const DocumentsPage = () => {
                     <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--color-navy)' }}>
                       <FileText size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }} /> OCR / Extracted Document Text
                     </div>
-                    <span className="badge badge-gray">{selectedDoc.ocrStatus || 'PENDING'}</span>
+                    <span
+                      className={`badge ${
+                        selectedDoc.ocrStatus === 'OCR_COMPLETED' || selectedDoc.ocrStatus === 'TEXT_EXTRACTED'
+                          ? 'badge-green'
+                          : selectedDoc.ocrStatus === 'OCR_FAILED'
+                          ? 'badge-red'
+                          : 'badge-gray'
+                      }`}
+                    >
+                      {selectedDoc.ocrStatus || 'PENDING'}
+                    </span>
                   </div>
                   {selectedDoc.ocrMessage && <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '6px' }}>{selectedDoc.ocrMessage}</div>}
                   {selectedDoc.extractedText ? (
