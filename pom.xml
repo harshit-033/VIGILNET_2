@@ -68,6 +68,13 @@
 			<version>${springdoc.version}</version>
 		</dependency>
 
+		<!-- PDF parsing and rendering for scanned-document OCR -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.8</version>
+		</dependency>
+
 		<!-- Testing -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
