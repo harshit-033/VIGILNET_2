@@ -175,6 +175,9 @@ public class DevTokenService {
             if (matched == null) {
                 matched = usersById.get(u);
             }
+            if (matched == null) {
+                throw new IllegalArgumentException("Unknown development identity: " + username.trim());
+            }
         }
 
         if (matched == null && role != null && !role.isBlank()) {
@@ -182,7 +185,7 @@ public class DevTokenService {
         }
 
         if (matched == null) {
-            matched = usersById.get("usr-ro-01"); // Default to Regional Officer
+            throw new IllegalArgumentException("Unknown development role: " + (role == null ? "" : role.trim()));
         }
 
         String token = "dev-token-" + matched.id() + "-" + UUID.randomUUID().toString().substring(0, 8);
