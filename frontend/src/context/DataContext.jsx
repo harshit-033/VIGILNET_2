@@ -147,7 +147,10 @@ const mapBackendDocumentToFrontend = (apiDoc) => {
     expiryDate: v.expiryDate ? String(v.expiryDate) : null,
     uploadedBy: v.uploadedBy,
     uploadedAt: v.createdAt ? new Date(v.createdAt).toLocaleDateString('en-GB') : '',
-    notes: v.notes || ''
+    notes: v.notes || '',
+    ocrStatus: v.ocrStatus || 'PENDING',
+    ocrMessage: v.ocrMessage || '',
+    extractedText: v.extractedText || ''
   })) : [];
 
   return {
@@ -164,6 +167,9 @@ const mapBackendDocumentToFrontend = (apiDoc) => {
     fileSize: apiDoc.fileSize || '0 B',
     mimeType: apiDoc.mimeType || 'application/pdf',
     sha256Hash: apiDoc.fileHash || '',
+    ocrStatus: apiDoc.ocrStatus || 'PENDING',
+    ocrMessage: apiDoc.ocrMessage || '',
+    extractedText: apiDoc.extractedText || '',
     issueDate: apiDoc.issueDate ? String(apiDoc.issueDate) : '',
     expiryDate: apiDoc.expiryDate ? String(apiDoc.expiryDate) : '',
     validityStatus: apiDoc.validityStatus || 'Valid',
@@ -706,26 +712,21 @@ export const DataProvider = ({ children }) => {
   // Document actions connected to Spring Boot REST endpoints & durable storage
   const uploadDocument = async (payload) => {
     try {
-      const formData = new FormData();
-      let fileToUpload = payload.file;
-      if (!fileToUpload) {
-        const textData = `Statutory Certificate: ${payload.category || payload.documentType}\nIssue: ${payload.issueDate}\nExpiry: ${payload.expiryDate}\nNotes: ${payload.notes || ''}`;
-        fileToUpload = new Blob([textData], { type: 'application/pdf' });
+      if (!payload.file || !(payload.file instanceof Blob) || payload.file.size === 0) {
+        return { success: false, error: 'Choose a real, non-empty PDF or image file before uploading.' };
       }
-      formData.append('file', fileToUpload, payload.fileName || 'statutory_document.pdf');
+      const formData = new FormData();
+      formData.append('file', payload.file, payload.fileName || payload.file.name || 'statutory_document.pdf');
       formData.append('documentType', payload.documentType || payload.category || 'Statutory Instrument');
       formData.append('category', payload.category || payload.documentType || 'Statutory Instrument');
       formData.append('issueDate', payload.issueDate);
       formData.append('expiryDate', payload.expiryDate);
       if (payload.notes) formData.append('notes', payload.notes);
 
-      let instIdNum = null;
-      if (payload.institutionId) {
-        const parsed = parseInt(String(payload.institutionId).replace(/\D/g, ''), 10);
-        if (!isNaN(parsed)) instIdNum = parsed;
-      }
-      if (instIdNum != null) {
-        formData.append('institutionId', instIdNum);
+      const suppliedInstitutionId = payload.institutionId == null ? '' : String(payload.institutionId).trim();
+      // Only numeric database IDs belong here; INST-xxxx is resolved using the authenticated user.
+      if (/^\d+$/.test(suppliedInstitutionId)) {
+        formData.append('institutionId', suppliedInstitutionId);
       }
 
       const response = await apiClient('/documents/upload', {
@@ -752,16 +753,14 @@ export const DataProvider = ({ children }) => {
       return { success: false, error: 'Document identifier is required for renewal.' };
     }
     try {
-      const formData = new FormData();
-      if (payload.file) {
-        formData.append('file', payload.file, payload.fileName || payload.file.name);
-      } else {
-        const textData = `Renewed Certificate Version for: ${docId}\nNew Issue: ${payload.newIssueDate}\nNew Expiry: ${payload.newExpiryDate}\nNotes: ${payload.notes || ''}`;
-        const dummy = new Blob([textData], { type: 'application/pdf' });
-        formData.append('file', dummy, payload.fileName || `${docId}_renewal.pdf`);
+      if (!payload.file || !(payload.file instanceof Blob) || payload.file.size === 0) {
+        return { success: false, error: 'Choose a real, non-empty PDF or image file before submitting a renewal.' };
       }
-      formData.append('newIssueDate', payload.newIssueDate);
-      formData.append('newExpiryDate', payload.newExpiryDate);
+      const formData = new FormData();
+      formData.append('file', payload.file, payload.fileName || payload.file.name || (docId + '_renewal.pdf'));
+      // Match the backend controller parameter names.
+      formData.append('issueDate', payload.newIssueDate);
+      formData.append('expiryDate', payload.newExpiryDate);
       if (payload.notes) formData.append('notes', payload.notes);
 
       const response = await apiClient(`/documents/${encodeURIComponent(docId)}/renew`, {
