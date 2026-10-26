@@ -52,7 +52,7 @@ public class InstitutionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REGIONAL_OFFICER', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMINISTRATOR', 'REGIONAL_OFFICER')")
     @Operation(summary = "Create institution", description = "Register a new canonical institution record")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Institution successfully created"),
