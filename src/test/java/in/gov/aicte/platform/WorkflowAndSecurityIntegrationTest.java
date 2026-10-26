@@ -314,11 +314,13 @@ class WorkflowAndSecurityIntegrationTest {
 
         // 7. Verify database transition records
         List<WorkflowTransition> transitions = workflowTransitionRepository.findByApplicationIdOrderByCreatedAtDesc(savedApp.getId());
-        assertThat(transitions).hasSize(5);
+        assertThat(transitions).hasSize(9);
         assertThat(transitions.get(0).getAction()).isEqualTo("COMPLETE_SCRUTINY");
-        assertThat(transitions.get(1).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
-        assertThat(transitions.get(2).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
-        assertThat(transitions.get(3).getAction()).isEqualTo("SUBMIT_CORRECTIONS");
-        assertThat(transitions.get(4).getAction()).isEqualTo("RETURN_FOR_CORRECTION");
+        assertThat(transitions.subList(1, 5))
+                .allMatch(transition -> "UPDATE_CHECKLIST".equals(transition.getAction()));
+        assertThat(transitions.get(5).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
+        assertThat(transitions.get(6).getAction()).isEqualTo("RESOLVE_DEFICIENCY");
+        assertThat(transitions.get(7).getAction()).isEqualTo("SUBMIT_CORRECTIONS");
+        assertThat(transitions.get(8).getAction()).isEqualTo("RETURN_FOR_CORRECTION");
     }
 }
