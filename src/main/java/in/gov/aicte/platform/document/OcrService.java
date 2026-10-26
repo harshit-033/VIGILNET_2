@@ -1,6 +1,7 @@
 package in.gov.aicte.platform.document;
 
 import org.apache.pdfbox.Loader;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.rendering.PDFRenderer;
@@ -31,6 +32,7 @@ public class OcrService {
     private final int maxPdfPages;
     private final long timeoutSeconds;
 
+    @Autowired
     public OcrService(Environment environment) {
         this(
                 environment.getProperty("app.ocr.command", "tesseract"),
