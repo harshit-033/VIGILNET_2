@@ -36,7 +36,7 @@ class PostgresPersistenceIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    @DisplayName("Verify Flyway V1 through V7 migration history in PostgreSQL")
+    @DisplayName("Verify Flyway V1 through V8 migration history in PostgreSQL")
     void shouldVerifyFlywayMigrationStatus() {
         Integer countV1 = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '1' AND success = true",
@@ -50,11 +50,17 @@ class PostgresPersistenceIntegrationTest {
         );
         assertThat(countV7).isNotNull().isEqualTo(1);
 
+        Integer countV8 = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '8' AND success = true",
+                Integer.class
+        );
+        assertThat(countV8).isNotNull().isEqualTo(1);
+
         Integer totalSuccess = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM flyway_schema_history WHERE success = true",
                 Integer.class
         );
-        assertThat(totalSuccess).isNotNull().isGreaterThanOrEqualTo(7);
+        assertThat(totalSuccess).isNotNull().isGreaterThanOrEqualTo(8);
     }
 
     @Test
