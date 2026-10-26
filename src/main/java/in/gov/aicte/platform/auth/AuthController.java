@@ -27,7 +27,7 @@ public class AuthController {
 
     public AuthController(
             DevTokenService devTokenService,
-            @Value("\${app.security.dev-tokens-enabled:true}") boolean devTokensEnabled
+            @Value("${app.security.dev-tokens-enabled:true}") boolean devTokensEnabled
     ) {
         this.devTokenService = devTokenService;
         this.devTokensEnabled = devTokensEnabled;
