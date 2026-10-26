@@ -56,7 +56,7 @@ public class DocumentController {
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "documentType", required = false) String documentType,
             @RequestParam(value = "category", required = false) String category,
-            @RequestParam(value = "institutionId", required = false) Long institutionId,
+            @RequestParam(value = "institutionId", required = false) String institutionId,
             @RequestParam(value = "applicationId", required = false) Long applicationId,
             @RequestParam(value = "issueDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate issueDate,
             @RequestParam(value = "expiryDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expiryDate,
