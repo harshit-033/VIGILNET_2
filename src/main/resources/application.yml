@@ -5,6 +5,11 @@ spring:
   application:
     name: sage-compliance-platform
 
+  servlet:
+    multipart:
+      max-file-size: ${MAX_UPLOAD_FILE_SIZE:25MB}
+      max-request-size: ${MAX_UPLOAD_REQUEST_SIZE:26MB}
+
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:aicte_platform_db}}
     username: ${SPRING_DATASOURCE_USERNAME:${DB_USER:aicte_app_user}}
@@ -29,6 +34,11 @@ spring:
     locations: classpath:db/migration
 
 app:
+  ocr:
+    command: ${TESSERACT_CMD:tesseract}
+    language: ${OCR_LANGUAGE:eng}
+    max-pdf-pages: ${OCR_MAX_PDF_PAGES:10}
+    timeout-seconds: ${OCR_TIMEOUT_SECONDS:45}
   security:
     dev-tokens-enabled: ${DEV_TOKENS_ENABLED:true}
 
